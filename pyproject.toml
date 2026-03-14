@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kairos"
+version = "0.0.0.dev0"
+description = "Kairos orchestration service for workload-aware and reconfigurable LLM serving"
+authors = [{ name = "René Enjilian" }]
+license = "Apache-2.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "httpx",
+]
+
+[tool.setuptools.packages.find]
+include = ["kairos*"]
+namespaces = false
