@@ -1,2 +1,9 @@
+from kairos.cli import main
 
-print("start of kairos")
+
+
+
+
+
+if __name__ == '__main__':
+    main()

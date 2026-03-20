@@ -13,8 +13,13 @@ dependencies = [
     "fastapi",
     "uvicorn",
     "httpx",
+    "argparse",
+    "pyzmq>=27.1.0",
 ]
 
 [tool.setuptools.packages.find]
 include = ["kairos*"]
 namespaces = false
+
+[project.scripts]
+kairos = "kairos.main:main"
