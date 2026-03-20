@@ -2,7 +2,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, APIRouter
 import uvicorn
-import os
+
 from kairos.api.routes.api_router import router as inference_router
 from kairos.ipc.client import CoreIpcClient
 from kairos.logger import init_logger
@@ -31,6 +31,7 @@ class Server:
         self.app.include_router(inference_router)
 
     def run(self) -> None:
+        logger.info("Starting KairosAPI server")
         uvicorn.run(
             self.app,
             host=self.host,

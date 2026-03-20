@@ -5,7 +5,7 @@ import os
 import zmq
 import zmq.asyncio
 
-
+logger = init_logger(__name__)
 
 
 class CoreIpcServer:
@@ -17,7 +17,7 @@ class CoreIpcServer:
 
     async def start(self) -> None:
         self.socket.bind(self.address)
-        print(f"[CORE][IPC] listening on {self.address}")
+        logger.info(f"Starting IPC server on {self.address}")
 
         while True:
             identity, payload = await self.socket.recv_multipart()
@@ -63,5 +63,6 @@ class CoreIpcServer:
         return json.loads(payload.decode("utf-8"))
 
     def close(self) -> None:
+        logger.info("Shutting down IPC server.")
         self.socket.close(0)
         self.context.term()

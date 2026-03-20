@@ -3,9 +3,12 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import uuid
-import os
 import zmq
 import zmq.asyncio
+
+from kairos.logger import init_logger
+
+logger = init_logger(__name__)
 
 
 class CoreIpcClient:
@@ -19,6 +22,7 @@ class CoreIpcClient:
         self._recv_task: asyncio.Task[None] | None = None
 
     async def start(self) -> None:
+        logger.info(f"Starting IPC client on {self.address}")
         self.socket.connect(self.address)
         self._recv_task = asyncio.create_task(self._recv_loop())
 
@@ -58,6 +62,7 @@ class CoreIpcClient:
                 future.set_exception(RuntimeError(reply["error"]))
 
     async def close(self) -> None:
+        logger.info("Shutting down IPC client.")
         if self._recv_task is not None:
             self._recv_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):

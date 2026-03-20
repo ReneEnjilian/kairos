@@ -39,7 +39,7 @@ class KairosFormatter(logging.Formatter):
 
     def get_process_name(self, pathname: str) -> str:
         path_elements = Path(pathname).parts
-        if "core" in path_elements or ("ipc" in path_elements and "server" in path_elements):
+        if "core" in path_elements or ("ipc" in path_elements and "server.py" in path_elements):
             return "KairosCore"
         else:
             return "KairosAPI"

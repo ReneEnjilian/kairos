@@ -5,12 +5,14 @@ import sys
 from pathlib import Path
 
 from kairos.ipc.server import CoreIpcServer
+from kairos.logger import init_logger
+
+logger = init_logger(__name__)
 
 
 async def async_main() -> None:
     config_path = Path(sys.argv[1])
-    print(f"[CORE] started with config: {config_path}")
-
+    # TODO: Add here parsing of config-yaml and starting of vllm servers subsequently
     ipc_server = CoreIpcServer()
 
     try:

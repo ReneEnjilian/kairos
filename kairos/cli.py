@@ -52,7 +52,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> None:
     parser = build_parser()
     args = parser.parse_args(argv)
-    logger.info("Starting Kairos API server...")
+
     if args.command == "serve":
         core_process = subprocess.Popen(
             [
