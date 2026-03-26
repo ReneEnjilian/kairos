@@ -2,7 +2,7 @@ import yaml
 
 from pathlib import Path
 from kairos.core.config.model_metadata import extract_model_metadata
-
+from kairos.core.catalog.model_factory import build_model_from_config
 
 def parse_config_file(config_path: Path, api_port: int) -> None:
     model_data = {}
@@ -24,6 +24,7 @@ def parse_config_file(config_path: Path, api_port: int) -> None:
         model_id = model['model_id']
         model_data['model_id'] = model_id
         model_data['relation'] = relation
+        model_data['storage_location'] = "disk"
 
         # retrieve data items parsed from huggingface
         meta_data = extract_model_metadata(model_id, relation)
@@ -31,4 +32,6 @@ def parse_config_file(config_path: Path, api_port: int) -> None:
         # unify data items
         model_data.update(meta_data)
 
-        print(model_data)
+        # build model and add to catalog
+        build_model_from_config(model_data)
+

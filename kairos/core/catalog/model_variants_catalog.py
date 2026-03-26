@@ -1,9 +1,10 @@
+from __future__ import annotations
 from kairos.core.catalog.model import Model
 
 
 class ModelVariantsCatalog:
 
-    _instance: "ModelVariantsCatalog" | None = None
+    _instance: ModelVariantsCatalog | None = None
     _initialized = False
 
     def __new__(cls):

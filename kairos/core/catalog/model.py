@@ -44,3 +44,19 @@ class Model:
 
     def update_location(self, storage_location: str) -> None:
         self.storage_location = storage_location
+
+    def print_all_fields(self) -> None:
+        print(f"name: {self.name}")
+        print(f"relation: {self.relation}")
+        print(f"port: {self.port}")
+        print(f"model_id: {self.model_id}")
+        print(f"compute_dtype: {self.compute_dtype}")
+        print(f"lineage: {self.lineage}")
+        print(f"size: {self.size}")
+        print(f"quant_method: {self.quant_method}")
+        print(f"weights_bits: {self.weight_bits}")
+        print(f"weight_type: {self.weight_type}")
+        print(f"activation_bits: {self.activation_bits}")
+        print(f"activation_type: {self.activation_type}")
+        print(f"storage_location: {self.storage_location}")
+        print(f"is_quantized: {self.is_quantized}")
