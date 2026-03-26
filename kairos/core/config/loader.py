@@ -36,3 +36,5 @@ def parse_config_file(config_path: Path, api_port: int) -> None:
         # build model and add to catalog
         build_model_from_config(model_data)
 
+
+

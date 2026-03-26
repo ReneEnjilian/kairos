@@ -11,4 +11,3 @@ def build_model_from_config(model_data: dict) -> None:
     catalog = ModelVariantsCatalog()
     catalog.add_model(model)
 
-
