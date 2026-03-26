@@ -4,6 +4,7 @@ from pathlib import Path
 from kairos.core.config.model_metadata import extract_model_metadata
 from kairos.core.catalog.model_factory import build_model_from_config
 
+
 def parse_config_file(config_path: Path, api_port: int) -> None:
     model_data = {}
     with open(config_path, "r") as f:

@@ -1,4 +1,4 @@
-from huggingface_hub import HfApi, HfFileSystem, get_safetensors_metadata
+from huggingface_hub import HfApi, HfFileSystem
 
 from typing import Any, Dict
 import json
