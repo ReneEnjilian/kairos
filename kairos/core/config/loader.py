@@ -1,0 +1,34 @@
+import yaml
+
+from pathlib import Path
+from kairos.core.config.model_metadata import extract_model_metadata
+
+
+def parse_config_file(config_path: Path, api_port: int) -> None:
+    model_data = {}
+    with open(config_path, "r") as f:
+        registration_data = yaml.safe_load(f)
+    port_counter = 1
+    for model in registration_data['models']:
+        if "name" in model.keys():
+            model_data['name'] = model['name']
+        else:
+            model_data['name'] = model['model_id']
+
+        if "port" in model.keys():
+            model_data['port'] = model['port']
+        else:
+            port = api_port + port_counter
+            port_counter += 1
+        relation = model['relation']
+        model_id = model['model_id']
+        model_data['model_id'] = model_id
+        model_data['relation'] = relation
+
+        # retrieve data items parsed from huggingface
+        meta_data = extract_model_metadata(model_id, relation)
+
+        # unify data items
+        model_data.update(meta_data)
+
+        print(model_data)

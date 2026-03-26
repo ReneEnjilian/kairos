@@ -60,6 +60,7 @@ def main(argv: Sequence[str] | None = None) -> None:
                 "-m",
                 "kairos.core.core",
                 str(args.config),
+                str(args.port),
             ]
         )
         try:
