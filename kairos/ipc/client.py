@@ -28,7 +28,6 @@ class CoreIpcClient:
 
     async def infer(self, payload: str) -> str:
         request_id = str(uuid.uuid4())
-
         loop = asyncio.get_running_loop()
         future: asyncio.Future[str] = loop.create_future()
         self._pending[request_id] = future
@@ -39,9 +38,8 @@ class CoreIpcClient:
             "payload": payload,
         }
 
-        await self.socket.send_json(message)
-
         try:
+            await self.socket.send_json(message)
             return await future
         finally:
             self._pending.pop(request_id, None)
