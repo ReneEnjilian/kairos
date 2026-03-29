@@ -1,3 +1,11 @@
+from typing import List
+from dataclasses import dataclass
+
+
+@dataclass(slots=True)
+class SampleItem:
+    result: str
+    latency: float
 
 
 class Model:
@@ -41,6 +49,11 @@ class Model:
 
         # TODO: SLOs and how to describe them (avg vs full data)
         # TODO: includes latency, energy, accuracy
+        self.avg_latency: float = 0.0
+        self.avg_accuracy: float = 0.0
+        self.avg_energy_consumption: float = 0.0
+        self.sample_results: List[SampleItem] = []
+        self.sample_limit = 10
 
     def update_location(self, storage_location: str) -> None:
         self.storage_location = storage_location
@@ -60,3 +73,11 @@ class Model:
         print(f"activation_type: {self.activation_type}")
         print(f"storage_location: {self.storage_location}")
         print(f"is_quantized: {self.is_quantized}")
+
+    def add_sample(self, result: str, latency: float) -> None:
+        self.sample_results.append(SampleItem(result, latency))
+        if len(self.sample_results) >= self.sample_limit:
+            # TODO: compute avg_latency, avg_accuracy
+            pass
+
+

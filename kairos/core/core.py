@@ -26,7 +26,7 @@ async def async_main() -> None:
 
     # For normal operation, use pause_after=None.
     # For testing, you can set pause_after=5 and watch dispatch stop.
-    monitor = CoreMonitor(control_queue=control_queue, pause_after=None)
+    monitor = CoreMonitor(control_queue=control_queue, pause_after=5)
 
     controller = CoreController(
         ipc_server=ipc_server,

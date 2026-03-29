@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-
+from typing import List
 from kairos.core.control.commands import ControlCommand
 from kairos.logger import init_logger
-
+from kairos.core.catalog.model_variants_catalog import ModelVariantsCatalog
 logger = init_logger(__name__)
 
 
@@ -26,6 +26,9 @@ class CoreMonitor:
 
         self.completion_queue: asyncio.Queue[CompletionItem] = asyncio.Queue()
         self.completion_count = 0
+        self.samples: List[str] = []    # only payload, results are stored in individual models
+        self.catalog = ModelVariantsCatalog()
+        self.current_model = self.catalog.get_baseline()
 
     async def notify_completion(self, payload: str, result: str) -> None:
         await self.completion_queue.put(
@@ -42,9 +45,15 @@ class CoreMonitor:
             ControlCommand(kind="RESUME_DISPATCH", reason=reason)
         )
 
+    def internal_work(self) -> None:
+        for i in range(5):
+            print(f"internal op: {i}")
+
     async def run(self) -> None:
         while True:
             item = await self.completion_queue.get()
+            self.samples.append(item.payload)
+            self.current_model.add_sample(item.result, 0.0) # ignore latency for now
 
             try:
                 self.completion_count += 1
@@ -62,6 +71,13 @@ class CoreMonitor:
                     await self.pause_dispatch(
                         reason=f"pause_after={self.pause_after}"
                     )
+                    self.internal_work()
                     self.pause_after = None
+                    self.completion_count = 0
+
+                    await self.resume_dispatch(
+                        reason="because"
+                    )
+
             finally:
                 self.completion_queue.task_done()
