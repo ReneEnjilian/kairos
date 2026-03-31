@@ -19,7 +19,7 @@ class DockerContainer:
         self.docker_image = "vllm-openai:thesis-v0.13.0"
         self.timeout = 300  # time to wait in seconds
 
-    def start_container(self, model_name: str, model_id: str, port: int, relation: str) -> None:
+    def start_container(self, model_name: str, model_id: str, port: int) -> None:
 
         hf_cache = str(Path.home() / ".cache" / "huggingface")
         hf_token = __import__("os").environ.get("HF_TOKEN")
@@ -64,11 +64,6 @@ class DockerContainer:
 
         self.running_containers[model_name] = container_name
         logger.info(f"Docker container for model {model_name} started.")
-
-        # ensure that base model starts in GPU
-        if relation != "base":
-            # TODO: send to L2 sleep
-            pass
 
     def is_running(self, port: int) -> bool:
         try:

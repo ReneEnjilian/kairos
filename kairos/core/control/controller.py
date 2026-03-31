@@ -9,6 +9,7 @@ from kairos.ipc.server import CoreIpcServer
 from kairos.logger import init_logger
 from kairos.core.vllm.docker import DockerContainer
 from kairos.core.catalog.model import Model
+from kairos.core.vllm.sleep_mode import *
 
 logger = init_logger(__name__)
 
@@ -119,7 +120,6 @@ class CoreController:
                     if self.dispatch_enabled.is_set():
                         self.dispatch_enabled.clear()
                     await self.start_model_server(command.model)
-                    command.model.set_storage_location_to_disk()
                     self.dispatch_enabled.set()
 
                 print("outsideeeeee!!!!")
@@ -176,8 +176,13 @@ class CoreController:
             model.name,
             model.model_id,
             model.port,
-            model.relation
         )
+        # ensure that base model starts in GPU
+        if model.relation != "base":
+            await sleep_level_2(model.port)
+            model.set_storage_location_to_disk()
+        else:
+            model.set_storage_location_to_gpu()
 
     def shutdown_containers(self):
         self.docker.stop_all_containers()
