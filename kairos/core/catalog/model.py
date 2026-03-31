@@ -80,4 +80,14 @@ class Model:
             # TODO: compute avg_latency, avg_accuracy
             pass
 
+    def set_storage_location_to_disk(self) -> None:
+        self.storage_location = "disk"
+
+    def set_storage_location_to_cpu(self) -> None:
+        self.storage_location = "cpu"
+
+    def set_storage_location_to_gpu(self) -> None:
+        self.storage_location = "gpu"
+
+
 

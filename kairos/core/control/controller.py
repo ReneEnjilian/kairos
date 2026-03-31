@@ -7,6 +7,8 @@ from kairos.core.control.commands import ControlCommand
 from kairos.core.monitoring.monitor import CoreMonitor
 from kairos.ipc.server import CoreIpcServer
 from kairos.logger import init_logger
+from kairos.core.vllm.docker import DockerContainer
+from kairos.core.catalog.model import Model
 
 logger = init_logger(__name__)
 
@@ -35,6 +37,8 @@ class CoreController:
         self.dispatch_enabled.set()
 
         self.active_model = "baseline"
+
+        self.docker = DockerContainer()
 
     async def handle_ipc_message(self, identity: bytes, message: dict) -> None:
         kind = message.get("kind")
@@ -71,6 +75,7 @@ class CoreController:
 
     async def dispatch_loop(self) -> None:
         while True:
+            print("dispatch")
             request = await self.request_queue.get()
 
             try:
@@ -105,17 +110,24 @@ class CoreController:
                 self.request_queue.task_done()
 
     async def control_loop(self) -> None:
+        await self.initiate_model_servers()
         while True:
             command = await self.control_queue.get()
 
             try:
+                if command.kind == "START_MODEL_SERVER":
+                    if self.dispatch_enabled.is_set():
+                        self.dispatch_enabled.clear()
+                    await self.start_model_server(command.model)
+                    command.model.set_storage_location_to_disk()
+                    self.dispatch_enabled.set()
+
+                print("outsideeeeee!!!!")
                 if command.kind == "PAUSE_DISPATCH":
                     if self.dispatch_enabled.is_set():
                         self.dispatch_enabled.clear()
                         logger.info(
                             "Dispatch paused."
-                            if command.reason is None
-                            else f"Dispatch paused: {command.reason}"
                         )
 
                 elif command.kind == "RESUME_DISPATCH":
@@ -123,8 +135,6 @@ class CoreController:
                         self.dispatch_enabled.set()
                         logger.info(
                             "Dispatch resumed."
-                            if command.reason is None
-                            else f"Dispatch resumed: {command.reason}"
                         )
 
             finally:
@@ -134,3 +144,47 @@ class CoreController:
         # Placeholder.
         # Later this becomes the real call into your vLLM-side logic.
         return f"processed by core: {payload}"
+
+    async def initiate_model_servers(self) -> None:
+        from kairos.core.catalog.model_variants_catalog import ModelVariantsCatalog
+        catalog = ModelVariantsCatalog()
+        models = catalog.get_catalog()
+        base_model = None
+        for model in models.values():
+            if model.relation == "base":
+                base_model = model
+            if model.relation != "base":
+                await self.control_queue.put(
+                   ControlCommand(
+                       kind="START_MODEL_SERVER",
+                       model=model,
+                   )
+                )
+        # ensure that base model is last in queue
+        if base_model is not None:
+            await self.control_queue.put(
+                ControlCommand(
+                    kind="START_MODEL_SERVER",
+                    model=base_model,
+                )
+            )
+
+    async def start_model_server(self, model: Model) -> None:
+        logger.info(f"Starting model {model.name}.")
+        await asyncio.to_thread(
+            self.docker.start_container,
+            model.name,
+            model.model_id,
+            model.port,
+            model.relation
+        )
+
+    def shutdown_containers(self):
+        self.docker.stop_all_containers()
+        logger.info("Shutting down containers.")
+
+
+
+
+
+

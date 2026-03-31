@@ -17,6 +17,7 @@ dependencies = [
     "pyzmq>=27.1.0",
     "huggingface-hub>=1.7.2",
     "nvidia-ml-py>=13.595.45",
+    "docker>=7.1.0",
 ]
 
 [tool.setuptools.packages.find]

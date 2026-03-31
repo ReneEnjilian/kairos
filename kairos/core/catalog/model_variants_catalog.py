@@ -28,3 +28,8 @@ class ModelVariantsCatalog:
         for model in self.catalog.values():
             if model.relation == "base":
                 return model
+
+    def get_catalog(self) -> dict[str, Model]:
+        return self.catalog
+
+

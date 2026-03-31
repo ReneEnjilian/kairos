@@ -59,7 +59,7 @@ async def async_main() -> None:
             monitor_task,
             return_exceptions=True,
         )
-
+        controller.shutdown_containers()
         ipc_server.close()
 
 
