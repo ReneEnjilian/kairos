@@ -178,8 +178,8 @@ class CoreController:
             model.port,
         )
         # ensure that base model starts in GPU
-        if model.relation != "base":
-            await sleep_level_2(model.port)
+        if model.relation == "quantized":
+            await sleep_level_1(model.port)
             model.set_storage_location_to_disk()
         else:
             model.set_storage_location_to_gpu()

@@ -33,7 +33,7 @@ class DockerContainer:
                 "--max-model-len", "32768",
             ],
             detach=True,
-            auto_remove=True,
+            #auto_remove=True,
             ports={"8000/tcp": port},
             volumes={
                 hf_cache: {
