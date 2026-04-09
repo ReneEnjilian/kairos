@@ -30,26 +30,8 @@ class CoreMonitor:
         self.catalog = ModelVariantsCatalog()
         self.current_model = self.catalog.get_baseline()
 
-    async def notify_completion(self, payload: str, result: str) -> None:
-        await self.completion_queue.put(
-            CompletionItem(payload=payload, result=result)
-        )
-
-    async def pause_dispatch(self, reason: str = "monitor request") -> None:
-        await self.control_queue.put(
-            ControlCommand(kind="PAUSE_DISPATCH", reason=reason)
-        )
-
-    async def resume_dispatch(self, reason: str = "monitor request") -> None:
-        await self.control_queue.put(
-            ControlCommand(kind="RESUME_DISPATCH", reason=reason)
-        )
-
-    def internal_work(self) -> None:
-        for i in range(5):
-            print(f"internal op: {i}")
-
     async def run(self) -> None:
+        await self.initiate_model_servers()
         while True:
             item = await self.completion_queue.get()
             self.samples.append(item.payload)
@@ -81,3 +63,46 @@ class CoreMonitor:
 
             finally:
                 self.completion_queue.task_done()
+
+    '''Methods used '''
+    async def notify_completion(self, payload: str, result: str) -> None:
+        await self.completion_queue.put(
+            CompletionItem(payload=payload, result=result)
+        )
+
+    async def pause_dispatch(self, reason: str = "monitor request") -> None:
+        await self.control_queue.put(
+            ControlCommand(kind="PAUSE_DISPATCH", reason=reason)
+        )
+
+    async def resume_dispatch(self, reason: str = "monitor request") -> None:
+        await self.control_queue.put(
+            ControlCommand(kind="RESUME_DISPATCH", reason=reason)
+        )
+
+    def internal_work(self) -> None:
+        for i in range(5):
+            print(f"internal op: {i}")
+
+    async def initiate_model_servers(self) -> None:
+        models = self.catalog.get_catalog()
+        base_model = None
+        for model in models.values():
+            if model.relation == "base":
+                base_model = model
+            if model.relation != "base":
+                await self.control_queue.put(
+                   ControlCommand(
+                       kind="START_MODEL_SERVER",
+                       model=model,
+                   )
+                )
+        # ensure that base model is last in queue
+        if base_model is not None:
+            await self.control_queue.put(
+                ControlCommand(
+                    kind="START_MODEL_SERVER",
+                    model=base_model,
+                )
+            )
+

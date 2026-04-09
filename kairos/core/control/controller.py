@@ -111,7 +111,7 @@ class CoreController:
                 self.request_queue.task_done()
 
     async def control_loop(self) -> None:
-        await self.initiate_model_servers()
+        #await self.initiate_model_servers()
         while True:
             command = await self.control_queue.get()
 
@@ -140,11 +140,17 @@ class CoreController:
             finally:
                 self.control_queue.task_done()
 
+    '''
+    Methods for dispatcher:
+    '''
     async def handle_infer(self, payload: str) -> str:
         # Placeholder.
         # Later this becomes the real call into your vLLM-side logic.
         return f"processed by core: {payload}"
 
+    '''
+    Methods for controller:
+    '''
     async def initiate_model_servers(self) -> None:
         from kairos.core.catalog.model_variants_catalog import ModelVariantsCatalog
         catalog = ModelVariantsCatalog()
