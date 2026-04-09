@@ -19,8 +19,8 @@ class DockerContainer:
         self.docker_image = "vllm-openai:thesis-v0.13.0"
         self.timeout = 300  # time to wait in seconds
 
-    def start_container(self, model_name: str, model_id: str, port: int) -> None:
-
+    def start_container(self, model_name: str, model_id: str, port: int, gpu_memory_allocation: float) -> None:
+        gpu_memory_utilization = gpu_memory_allocation / 24000000000
         hf_cache = str(Path.home() / ".cache" / "huggingface")
         hf_token = __import__("os").environ.get("HF_TOKEN")
         container_name = f"kairos-{model_name.lower().replace('/', '-')}"
@@ -30,10 +30,11 @@ class DockerContainer:
             command=[
                 model_id,
                 "--enable-sleep-mode",
-                "--max-model-len", "32768",
+                "--max-model-len", "2048",
+                "--gpu-memory-utilization", str(gpu_memory_utilization),
             ],
             detach=True,
-            #auto_remove=True,
+            auto_remove=True,
             ports={"8000/tcp": port},
             volumes={
                 hf_cache: {

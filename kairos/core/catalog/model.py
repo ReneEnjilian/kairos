@@ -55,6 +55,9 @@ class Model:
         self.sample_results: List[SampleItem] = []
         self.sample_limit = 10
 
+        # calculate memory requirement (estimate)
+        self.gpu_memory_allocation: float = self.size * 1.3
+
     def update_location(self, storage_location: str) -> None:
         self.storage_location = storage_location
 

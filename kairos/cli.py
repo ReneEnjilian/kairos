@@ -7,7 +7,7 @@ import sys
 import os
 from kairos.api.server import Server
 from kairos.logger import init_logger
-
+import signal
 logger = init_logger(__name__)
 
 
@@ -67,8 +67,29 @@ def main(argv: Sequence[str] | None = None) -> None:
             server = Server(host=args.host, port=args.port)
             server.run()
         finally:
-            core_process.terminate()
-            core_process.wait()
+            #core_process.terminate()
+            #core_process.wait()
+            if core_process.poll() is None:
+                logger.info("Waiting for KairosCore to shut down gracefully.")
+
+                try:
+                    core_process.wait(timeout=15)
+                except subprocess.TimeoutExpired:
+                    logger.warning("KairosCore still running. Sending SIGINT.")
+                    core_process.send_signal(signal.SIGINT)
+
+                    try:
+                        core_process.wait(timeout=15)
+                    except subprocess.TimeoutExpired:
+                        logger.warning("KairosCore did not stop after SIGINT. Sending SIGTERM.")
+                        core_process.terminate()
+
+                        try:
+                            core_process.wait(timeout=5)
+                        except subprocess.TimeoutExpired:
+                            logger.error("KairosCore still alive. Killing it.")
+                            core_process.kill()
+                            core_process.wait()
 
 
 

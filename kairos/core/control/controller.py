@@ -176,6 +176,7 @@ class CoreController:
             model.name,
             model.model_id,
             model.port,
+            model.gpu_memory_allocation
         )
         # ensure that base model starts in GPU
         if model.relation == "quantized":
