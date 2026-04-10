@@ -151,29 +151,6 @@ class CoreController:
     '''
     Methods for controller:
     '''
-    async def initiate_model_servers(self) -> None:
-        from kairos.core.catalog.model_variants_catalog import ModelVariantsCatalog
-        catalog = ModelVariantsCatalog()
-        models = catalog.get_catalog()
-        base_model = None
-        for model in models.values():
-            if model.relation == "base":
-                base_model = model
-            if model.relation != "base":
-                await self.control_queue.put(
-                   ControlCommand(
-                       kind="START_MODEL_SERVER",
-                       model=model,
-                   )
-                )
-        # ensure that base model is last in queue
-        if base_model is not None:
-            await self.control_queue.put(
-                ControlCommand(
-                    kind="START_MODEL_SERVER",
-                    model=base_model,
-                )
-            )
 
     async def start_model_server(self, model: Model) -> None:
         logger.info(f"Starting model {model.name}.")
