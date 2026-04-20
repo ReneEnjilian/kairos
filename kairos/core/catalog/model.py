@@ -92,5 +92,8 @@ class Model:
     def set_storage_location_to_gpu(self) -> None:
         self.storage_location = "gpu"
 
+    def is_baseline(self) -> bool:
+        return self.relation == "baseline"
+
 
 

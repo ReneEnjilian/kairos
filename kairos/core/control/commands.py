@@ -9,6 +9,13 @@ ControlKind = Literal[
     "RESUME_DISPATCH",
     "START_MODEL_SERVER",
     "STOP_MODEL_SERVER",
+    "L1_SLEEP",
+    "L2_SLEEP",
+    "WAKE_UP_FROM_CPU",
+    "WAKE_UP_FROM_DISK",
+    "WAKE_UP_PERSISTENT",
+    "WAKE_UP_FROM_PREFETCH",
+    "PREFETCH",
 ]
 
 
