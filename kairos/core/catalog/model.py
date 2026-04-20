@@ -58,8 +58,6 @@ class Model:
         # calculate memory requirement (estimate)
         self.gpu_memory_allocation: float = self.size * 1.3
 
-    def update_location(self, storage_location: str) -> None:
-        self.storage_location = storage_location
 
     def print_all_fields(self) -> None:
         print(f"name: {self.name}")
@@ -94,6 +92,12 @@ class Model:
 
     def is_baseline(self) -> bool:
         return self.relation == "baseline"
+
+    def is_quantized(self) -> bool:
+        return self.relation == "quantized"
+
+    def is_independent(self) -> bool:
+        return self.relation == "independent"
 
 
 
