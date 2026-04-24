@@ -9,3 +9,15 @@ models:
     port: 8002
     model_id: RedHatAI/Llama-3.2-3B-Instruct-quantized.w8a8
 
+SLOs:
+  - accuracy: 0.9
+  - latency: 200
+
+knobs:
+  sample_rate: 50
+  sample_size: 100
+  scheduler: holt
+  monotonicity: true
+  discard: 3
+  recycle: 3
+  gpu_factor: 1.3
