@@ -30,7 +30,7 @@ class CoreMonitor:
         self.catalog = ModelVariantsCatalog()
         self.current_model = self.catalog.get_baseline()
 
-    async def run(self) -> None:
+    async def monitor_loop(self) -> None:
         await self.initiate_model_servers()
         while True:
             item = await self.completion_queue.get()

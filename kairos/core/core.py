@@ -39,7 +39,7 @@ async def async_main() -> None:
     )
     dispatch_task = asyncio.create_task(controller.dispatch_loop())
     control_task = asyncio.create_task(controller.control_loop())
-    monitor_task = asyncio.create_task(monitor.run())
+    monitor_task = asyncio.create_task(monitor.monitor_loop())
 
     try:
         await asyncio.gather(
