@@ -45,7 +45,6 @@ class Model:
         self.activation_type = activation_type
 
         self.storage_location = storage_location  # options: disk, cpu, gpu
-        self.is_quantized = True if self.relation == "quantized" else False
 
         # TODO: SLOs and how to describe them (avg vs full data)
         # TODO: includes latency, energy, accuracy
@@ -53,10 +52,9 @@ class Model:
         self.avg_accuracy: float = 0.0
         self.avg_energy_consumption: float = 0.0
         self.sample_results: List[SampleItem] = []
-        self.sample_limit = 10
 
         # calculate memory requirement (estimate)
-        self.gpu_memory_allocation: float = self.size * 1.3
+        self.gpu_memory_allocation: float = self.size
 
 
     def print_all_fields(self) -> None:
@@ -98,6 +96,9 @@ class Model:
 
     def is_independent(self) -> bool:
         return self.relation == "independent"
+
+    def update_gpu_allocation(self, gpu_factor: float) -> None:
+        self.gpu_memory_allocation *= gpu_factor
 
 
 
