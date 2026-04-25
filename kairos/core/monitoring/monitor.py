@@ -20,6 +20,8 @@ class CoreMonitor:
         self,
         control_queue: asyncio.Queue[ControlCommand],
         pause_after: int | None = None,
+        accuracy: float | None = None,
+        latency: float | None = None,
     ) -> None:
         self.control_queue = control_queue
         self.pause_after = pause_after
@@ -29,6 +31,8 @@ class CoreMonitor:
         self.samples: List[str] = []    # only payload, results are stored in individual models
         self.catalog = ModelVariantsCatalog()
         self.current_model = self.catalog.get_baseline()
+        self.accuracy = accuracy
+        self.latency = latency
 
     async def monitor_loop(self) -> None:
         await self.initiate_model_servers()

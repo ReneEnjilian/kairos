@@ -25,10 +25,10 @@ async def async_main() -> None:
     ipc_server = CoreIpcServer()
 
     control_queue: asyncio.Queue[ControlCommand] = asyncio.Queue()
-
+    accuracy, latency = parse_objectives_from_config(config_path)
     # For normal operation, use pause_after=None.
     # For testing, you can set pause_after=5 and watch dispatch stop.
-    monitor = CoreMonitor(control_queue=control_queue, pause_after=5)
+    monitor = CoreMonitor(control_queue=control_queue, pause_after=5, accuracy=accuracy, latency=latency)
 
     controller = CoreController(
         ipc_server=ipc_server,
