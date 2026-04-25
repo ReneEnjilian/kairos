@@ -5,7 +5,7 @@ from kairos.core.config.model_metadata import extract_model_metadata
 from kairos.core.catalog.model_factory import build_model_from_config
 
 
-def parse_config_file(config_path: Path, api_port: int) -> None:
+def parse_models_from_config(config_path: Path, api_port: int) -> None:
     model_data = {}
     with open(config_path, "r") as f:
         registration_data = yaml.safe_load(f)
@@ -35,6 +35,15 @@ def parse_config_file(config_path: Path, api_port: int) -> None:
 
         # build model and add to catalog
         build_model_from_config(model_data)
+
+
+# TODO: Implement parsing of SLOs and knobs
+def parse_objectives_from_config(config_path: Path):
+    pass
+
+
+def parse_knobs_from_config(config_path: Path):
+    pass
 
 
 

@@ -4,7 +4,9 @@ import asyncio
 import sys
 from pathlib import Path
 
-from kairos.core.config.loader import parse_config_file
+from kairos.core.config.loader import (
+    parse_models_from_config, parse_knobs_from_config,
+    parse_objectives_from_config)
 from kairos.core.control.commands import ControlCommand
 from kairos.core.control.controller import CoreController
 from kairos.core.monitoring.monitor import CoreMonitor
@@ -18,7 +20,7 @@ async def async_main() -> None:
     config_path = Path(sys.argv[1])
     api_port = int(sys.argv[2])
 
-    parse_config_file(config_path, api_port)
+    parse_models_from_config(config_path, api_port)
 
     ipc_server = CoreIpcServer()
 
