@@ -1,4 +1,6 @@
 import pynvml
+import psutil
+import shutil
 
 
 class MemoryManager:
@@ -37,14 +39,54 @@ class MemoryManager:
         mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
         return int(mem_info.free)
 
-    def can_move_to_gpu(self, device_id: int, model_size_bytes: int) -> bool:
+    def can_move_to_gpu(self, device_id: int, required_gpu_bytes: int) -> bool:
         total_bytes = self.get_total_gpu_bytes(device_id)
         free_bytes = self.get_free_gpu_bytes(device_id)
 
         safety_margin_bytes = int(total_bytes * self.gpu_safety_margin_percent)
         effective_free_bytes = free_bytes - safety_margin_bytes
 
+        return required_gpu_bytes <= effective_free_bytes
+
+    '''CPU-related methods'''
+
+    def get_total_cpu_bytes(self) -> int:
+        return psutil.virtual_memory().total
+
+    def get_free_cpu_bytes(self) -> int:
+        return psutil.virtual_memory().free
+
+    def get_available_cpu_bytes(self) -> int:
+        return psutil.virtual_memory().available
+
+    def can_move_to_cpu(self, model_size_bytes: int) -> bool:
+        total_bytes = self.get_total_cpu_bytes()
+        available_bytes = self.get_available_cpu_bytes()
+
+        safety_margin_bytes = int(total_bytes * self.cpu_safety_margin_percent)
+        effective_free_bytes = available_bytes - safety_margin_bytes
+
         return model_size_bytes <= effective_free_bytes
+
+    '''Disk-related methods'''
+
+    def get_total_disk_bytes(self) -> int:
+        usage = shutil.disk_usage(self.disk_path)
+        return usage.total
+
+    def get_free_disk_bytes(self) -> int:
+        usage = shutil.disk_usage(self.disk_path)
+        return usage.free
+
+    def can_move_to_disk(self, model_size_bytes: int) -> bool:
+        total_bytes = self.get_total_disk_bytes()
+        free_bytes = self.get_free_disk_bytes()
+
+        safety_margin_bytes = int(total_bytes * self.disk_safety_margin_percent)
+        effective_free_bytes = free_bytes - safety_margin_bytes
+
+        return model_size_bytes <= effective_free_bytes
+
 
 
 
