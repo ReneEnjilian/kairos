@@ -22,6 +22,10 @@ class CoreMonitor:
         pause_after: int | None = None,
         accuracy: float | None = None,
         latency: float | None = None,
+        monotonicity: bool = False,
+        discard: bool = False,
+        recycle: bool = False,
+        sample_size: int = 100,
     ) -> None:
         self.control_queue = control_queue
         self.pause_after = pause_after
@@ -33,6 +37,10 @@ class CoreMonitor:
         self.current_model = self.catalog.get_baseline()
         self.accuracy = accuracy
         self.latency = latency
+        self.monotonicity = monotonicity
+        self.discard = discard
+        self.recycle = recycle
+        self.sample_size = sample_size
 
     async def monitor_loop(self) -> None:
         await self.initiate_model_servers()

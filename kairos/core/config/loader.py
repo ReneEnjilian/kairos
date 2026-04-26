@@ -27,6 +27,11 @@ def parse_models_from_config(config_path: Path, api_port: int) -> None:
         model_data['relation'] = relation
         model_data['storage_location'] = "disk"
 
+        knobs = registration_data.get("knobs", None)
+        if knobs is not None:
+            if "gpu_factor" in knobs.keys():
+                model_data['gpu_factor'] = knobs["gpu_factor"]
+
         # retrieve data items parsed from huggingface
         meta_data = extract_model_metadata(model_id, relation)
 
@@ -37,25 +42,27 @@ def parse_models_from_config(config_path: Path, api_port: int) -> None:
         build_model_from_config(model_data)
 
 
-# TODO: Implement parsing of SLOs and knobs
 def parse_objectives_from_config(config_path: Path):
     accuracy = None
     latency = None
     with open(config_path, "r") as f:
         registration_data = yaml.safe_load(f)
     service_level_objectives = registration_data.get("SLOs")
-
-    for slo in service_level_objectives:
-        if "accuracy" in slo.keys():
-            accuracy = slo["accuracy"]
-        elif "latency" in slo.keys():
-            latency = slo["latency"]
+    if "accuracy" in service_level_objectives.keys():
+        accuracy = service_level_objectives["accuracy"]
+    if "latency" in service_level_objectives.keys():
+        latency = service_level_objectives["latency"]
 
     return accuracy, latency
 
 
 def parse_knobs_from_config(config_path: Path):
-    pass
+    with open(config_path, "r") as f:
+        registration_data = yaml.safe_load(f)
+    knobs = registration_data.get("knobs")
+
+
+
 
 
 

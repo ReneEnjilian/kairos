@@ -24,6 +24,7 @@ class Model:
             activation_bits: int = None,
             activation_type: str = None,
             storage_location: str = None,
+            gpu_factor: float = 2.0,
     ):
 
         # Specified in configuration file
@@ -54,7 +55,8 @@ class Model:
         self.sample_results: List[SampleItem] = []
 
         # calculate memory requirement (estimate)
-        self.gpu_memory_allocation: float = self.size
+        self.gpu_factor = gpu_factor
+        self.gpu_memory_allocation: float = self.size * self.gpu_factor
 
 
     def print_all_fields(self) -> None:
@@ -71,7 +73,7 @@ class Model:
         print(f"activation_bits: {self.activation_bits}")
         print(f"activation_type: {self.activation_type}")
         print(f"storage_location: {self.storage_location}")
-        print(f"is_quantized: {self.is_quantized}")
+        print(f"gpu_factor: {self.gpu_factor}")
 
     def add_sample(self, result: str, latency: float) -> None:
         self.sample_results.append(SampleItem(result, latency))
@@ -98,7 +100,7 @@ class Model:
         return self.relation == "independent"
 
     def update_gpu_allocation(self, gpu_factor: float) -> None:
-        self.gpu_memory_allocation *= gpu_factor
+        self.gpu_memory_allocation = self.size * gpu_factor
 
 
 
