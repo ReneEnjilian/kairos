@@ -10,6 +10,7 @@ from kairos.core.config.loader import (
 from kairos.core.control.commands import ControlCommand
 from kairos.core.control.controller import CoreController
 from kairos.core.monitoring.monitor import CoreMonitor
+from kairos.core.scheduling.scheduler import CoreScheduler
 from kairos.ipc.server import CoreIpcServer
 from kairos.logger import init_logger
 
@@ -26,15 +27,21 @@ async def async_main() -> None:
 
     control_queue: asyncio.Queue[ControlCommand] = asyncio.Queue()
     accuracy, latency = parse_objectives_from_config(config_path)
-    parse_knobs_from_config(config_path)
+    knobs = parse_knobs_from_config(config_path)
     # For normal operation, use pause_after=None.
     # For testing, you can set pause_after=5 and watch dispatch stop.
-    monitor = CoreMonitor(control_queue=control_queue, pause_after=5, accuracy=accuracy, latency=latency)
+    monitor = CoreMonitor(control_queue=control_queue, pause_after=5,
+                          accuracy=accuracy, latency=latency, **knobs["monitoring"])
 
     controller = CoreController(
         ipc_server=ipc_server,
         control_queue=control_queue,
         monitor=monitor,
+        **knobs["control"]
+    )
+
+    scheduler = CoreScheduler(
+        **knobs["scheduling"]
     )
 
     ipc_task = asyncio.create_task(
@@ -43,6 +50,7 @@ async def async_main() -> None:
     dispatch_task = asyncio.create_task(controller.dispatch_loop())
     control_task = asyncio.create_task(controller.control_loop())
     monitor_task = asyncio.create_task(monitor.monitor_loop())
+    schedule_task = asyncio.create_task(scheduler.scheduling_loop())
 
     try:
         await asyncio.gather(
@@ -50,9 +58,10 @@ async def async_main() -> None:
             dispatch_task,
             control_task,
             monitor_task,
+            schedule_task,
         )
     finally:
-        for task in (ipc_task, dispatch_task, control_task, monitor_task):
+        for task in (ipc_task, dispatch_task, control_task, monitor_task, schedule_task):
             task.cancel()
 
         await asyncio.gather(
@@ -60,6 +69,7 @@ async def async_main() -> None:
             dispatch_task,
             control_task,
             monitor_task,
+            schedule_task,
             return_exceptions=True,
         )
         controller.shutdown_containers()

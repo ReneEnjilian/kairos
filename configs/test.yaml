@@ -14,7 +14,7 @@ SLOs:
   latency: 200.8
 
 knobs:
-  sample_rate: 50
+  #sample_rate: 50
   sample_size: 100
   scheduler: holt
   monotonicity: true

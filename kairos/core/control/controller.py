@@ -27,6 +27,7 @@ class CoreController:
         ipc_server: CoreIpcServer,
         control_queue: asyncio.Queue[ControlCommand],
         monitor: CoreMonitor | None = None,
+        sample_rate: int = 30
     ) -> None:
         self.ipc_server = ipc_server
         self.control_queue = control_queue
@@ -40,6 +41,7 @@ class CoreController:
         self.active_model = "baseline"
 
         self.docker = DockerContainer()
+        self.sample_rate = sample_rate
 
     async def handle_ipc_message(self, identity: bytes, message: dict) -> None:
         kind = message.get("kind")

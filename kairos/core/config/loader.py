@@ -59,7 +59,31 @@ def parse_objectives_from_config(config_path: Path):
 def parse_knobs_from_config(config_path: Path):
     with open(config_path, "r") as f:
         registration_data = yaml.safe_load(f)
+    knobs_data = {}
+    knobs_data['control'] = {}
+    knobs_data['monitoring'] = {}
+    knobs_data['scheduling'] = {}
+
     knobs = registration_data.get("knobs")
+    control = {}
+    monitoring = {}
+    scheduling = {}
+
+    for knob in knobs:
+        if knob == "sample_rate":
+            control[knob] = knobs[knob]
+        elif knob == "scheduler":
+            scheduling[knob] = knobs[knob]
+        elif knob == "gpu_factor":
+            continue
+        else:
+            monitoring[knob] = knobs[knob]
+
+    knobs_data['control'] = control
+    knobs_data['monitoring'] = monitoring
+    knobs_data['scheduling'] = scheduling
+
+    return knobs_data
 
 
 
