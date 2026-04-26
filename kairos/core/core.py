@@ -4,6 +4,7 @@ import asyncio
 import sys
 from pathlib import Path
 
+from kairos.core.memory.memory_manager import MemoryManager
 from kairos.core.config.loader import (
     parse_models_from_config, parse_knobs_from_config,
     parse_objectives_from_config)
@@ -30,7 +31,8 @@ async def async_main() -> None:
     knobs = parse_knobs_from_config(config_path)
     # For normal operation, use pause_after=None.
     # For testing, you can set pause_after=5 and watch dispatch stop.
-    monitor = CoreMonitor(control_queue=control_queue, pause_after=5,
+    memory_manager = MemoryManager()
+    monitor = CoreMonitor(memory_manager=memory_manager, control_queue=control_queue, pause_after=5,
                           accuracy=accuracy, latency=latency, **knobs["monitoring"])
 
     controller = CoreController(
@@ -41,6 +43,7 @@ async def async_main() -> None:
     )
 
     scheduler = CoreScheduler(
+        memory_manager=memory_manager,
         **knobs["scheduling"]
     )
 

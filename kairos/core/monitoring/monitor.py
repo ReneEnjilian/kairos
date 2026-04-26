@@ -4,6 +4,7 @@ import asyncio
 from dataclasses import dataclass
 from typing import List
 from kairos.core.control.commands import ControlCommand
+from kairos.core.memory.memory_manager import MemoryManager
 from kairos.logger import init_logger
 from kairos.core.catalog.model_variants_catalog import ModelVariantsCatalog
 logger = init_logger(__name__)
@@ -19,6 +20,7 @@ class CoreMonitor:
     def __init__(
         self,
         control_queue: asyncio.Queue[ControlCommand],
+        memory_manager: MemoryManager,
         pause_after: int | None = None,
         accuracy: float | None = None,
         latency: float | None = None,
@@ -41,6 +43,7 @@ class CoreMonitor:
         self.discard = discard
         self.recycle = recycle
         self.sample_size = sample_size
+        self.memory_manager = memory_manager
 
     async def monitor_loop(self) -> None:
         await self.initiate_model_servers()

@@ -1,26 +1,34 @@
 import pynvml
 import psutil
 import shutil
+from pathlib import Path
 
 
 class MemoryManager:
     def __init__(
         self,
-        gpu_device_ids: list[int],
-        disk_path: str,
+        disk_path: str | None = None,
+        gpu_device_ids: list[int] | None = None,
         cpu_safety_margin_percent: float = 0.10,
         gpu_safety_margin_percent: float = 0.10,
         disk_safety_margin_percent: float = 0.05,
     ):
 
-        self.gpu_device_ids = gpu_device_ids
-        self.disk_path = disk_path
+        pynvml.nvmlInit()
+
+        if gpu_device_ids is None:
+            gpu_count = pynvml.nvmlDeviceGetCount()
+            self.gpu_device_ids = list(range(gpu_count))
+        else:
+            self.gpu_device_ids = gpu_device_ids
+
+        if disk_path is None:
+            self.disk_path = str(Path.home())
+        else:
+            self.disk_path = disk_path
         self.cpu_safety_margin_percent = cpu_safety_margin_percent
         self.gpu_safety_margin_percent = gpu_safety_margin_percent
         self.disk_safety_margin_percent = disk_safety_margin_percent
-
-        # NVML must be initialized
-        pynvml.nvmlInit()
 
     '''GPU-related methods'''
 
