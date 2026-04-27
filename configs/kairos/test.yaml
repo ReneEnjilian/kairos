@@ -13,6 +13,8 @@ SLOs:
   accuracy: 0.9
   latency: 200.8
 
+# rename knobs in monitoring
+# move gpu_factor to models, more intuitive -> all the same or individual ?
 knobs:
   sample_rate: 50
   sample_size: 100
@@ -21,3 +23,8 @@ knobs:
   discard: 3
   recycle: 3
   gpu_factor: 1.3
+
+# create new field scheduler
+#scheduler:
+  # method: holt
+  # window: 10sec
