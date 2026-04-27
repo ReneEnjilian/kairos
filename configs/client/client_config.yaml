@@ -1,8 +1,7 @@
-
-dataset: boolq
-distribution: gaussian
-client_port: 8020
-kairos_port: 8000
-logs: true
+client:
+  dataset: boolq
+  distribution: gaussian
+  kairos_port: 8000
+  logs: true
 
 

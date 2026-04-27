@@ -1,0 +1,1 @@
+'''loads and validates client config'''
