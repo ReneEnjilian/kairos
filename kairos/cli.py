@@ -12,7 +12,7 @@ logger = init_logger(__name__)
 
 
 def existing_file(path_str: str) -> Path:
-    path = Path(__file__).resolve().parent.parent / "configs" / path_str
+    path = Path(__file__).resolve().parent.parent / "configs/kairos" / path_str
     if not path.is_file():
         raise argparse.ArgumentTypeError(f"Config file does not exist: {path_str}")
     return path
