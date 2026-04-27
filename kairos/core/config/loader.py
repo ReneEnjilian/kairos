@@ -23,14 +23,11 @@ def parse_models_from_config(config_path: Path, api_port: int) -> None:
             port_counter += 1
         relation = model['relation']
         model_id = model['model_id']
+        gpu_factor = model['gpu_factor']
         model_data['model_id'] = model_id
         model_data['relation'] = relation
         model_data['storage_location'] = "disk"
-
-        knobs = registration_data.get("knobs", None)
-        if knobs is not None:
-            if "gpu_factor" in knobs.keys():
-                model_data['gpu_factor'] = knobs["gpu_factor"]
+        model_data['gpu_factor'] = gpu_factor
 
         # retrieve data items parsed from huggingface
         meta_data = extract_model_metadata(model_id, relation)
@@ -47,7 +44,7 @@ def parse_objectives_from_config(config_path: Path):
     latency = None
     with open(config_path, "r") as f:
         registration_data = yaml.safe_load(f)
-    service_level_objectives = registration_data.get("SLOs")
+    service_level_objectives = registration_data.get("slo")
     if "accuracy" in service_level_objectives.keys():
         accuracy = service_level_objectives["accuracy"]
     if "latency" in service_level_objectives.keys():
@@ -56,34 +53,34 @@ def parse_objectives_from_config(config_path: Path):
     return accuracy, latency
 
 
-def parse_knobs_from_config(config_path: Path):
+def parse_monitoring_from_config(config_path: Path):
     with open(config_path, "r") as f:
         registration_data = yaml.safe_load(f)
-    knobs_data = {}
-    knobs_data['control'] = {}
-    knobs_data['monitoring'] = {}
-    knobs_data['scheduling'] = {}
+    monitoring_data = {}
+    monitoring_data['control'] = {}
+    monitoring_data['monitoring'] = {}
 
-    knobs = registration_data.get("knobs")
+    monitoring_knobs = registration_data.get("monitoring")
     control = {}
     monitoring = {}
-    scheduling = {}
 
-    for knob in knobs:
+    for knob in monitoring_knobs:
         if knob == "sample_rate":
-            control[knob] = knobs[knob]
-        elif knob == "scheduler":
-            scheduling[knob] = knobs[knob]
-        elif knob == "gpu_factor":
-            continue
+            control[knob] = monitoring_knobs[knob]
         else:
-            monitoring[knob] = knobs[knob]
+            monitoring[knob] = monitoring_knobs[knob]
 
-    knobs_data['control'] = control
-    knobs_data['monitoring'] = monitoring
-    knobs_data['scheduling'] = scheduling
+    monitoring_data['control'] = control
+    monitoring_data['monitoring'] = monitoring
 
-    return knobs_data
+    return monitoring_data
+
+
+def parse_scheduling_from_config(config_path: Path):
+    with open(config_path, "r") as f:
+        registration_data = yaml.safe_load(f)
+    scheduling = registration_data.get("scheduler")
+    return scheduling
 
 
 

@@ -10,12 +10,14 @@ class CoreScheduler:
     def __init__(
         self,
         memory_manager: MemoryManager,
-        scheduler: str | None = "ewma",
+        method: str | None = "ewma",
+        window: int | None = None,
     ):
-        self.scheduler = scheduler
+        self.method = method
+        self.window = window
         self.memory_manager = memory_manager
 
     async def scheduling_loop(self) -> None:
-        print(self.scheduler)
+        print(self.method)
         while True:
             break

@@ -6,8 +6,8 @@ from pathlib import Path
 
 from kairos.core.memory.memory_manager import MemoryManager
 from kairos.core.config.loader import (
-    parse_models_from_config, parse_knobs_from_config,
-    parse_objectives_from_config)
+    parse_models_from_config, parse_monitoring_from_config,
+    parse_objectives_from_config, parse_scheduling_from_config)
 from kairos.core.control.commands import ControlCommand
 from kairos.core.control.controller import CoreController
 from kairos.core.monitoring.monitor import CoreMonitor
@@ -28,7 +28,7 @@ async def async_main() -> None:
 
     control_queue: asyncio.Queue[ControlCommand] = asyncio.Queue()
     accuracy, latency = parse_objectives_from_config(config_path)
-    knobs = parse_knobs_from_config(config_path)
+    knobs = parse_monitoring_from_config(config_path)
     # For normal operation, use pause_after=None.
     # For testing, you can set pause_after=5 and watch dispatch stop.
     memory_manager = MemoryManager()
@@ -42,9 +42,10 @@ async def async_main() -> None:
         **knobs["control"]
     )
 
+    scheduling = parse_scheduling_from_config(config_path)
     scheduler = CoreScheduler(
         memory_manager=memory_manager,
-        **knobs["scheduling"]
+        **scheduling,
     )
 
     ipc_task = asyncio.create_task(

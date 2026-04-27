@@ -3,28 +3,26 @@ models:
     relation: base
     port: 8001
     model_id: meta-llama/Llama-3.1-8B-Instruct
+    gpu_factor: 1.3
 
   - name: B
     relation: quantized
     port: 8002
     model_id: RedHatAI/Llama-3.2-3B-Instruct-quantized.w8a8
+    gpu_factor: 1.3
 
-SLOs:
+slo:
   accuracy: 0.9
   latency: 200.8
 
-# rename knobs in monitoring
-# move gpu_factor to models, more intuitive -> all the same or individual ?
-knobs:
+
+monitoring:
   sample_rate: 50
   sample_size: 100
-  scheduler: holt
   monotonicity: true
   discard: 3
   recycle: 3
-  gpu_factor: 1.3
 
-# create new field scheduler
-#scheduler:
-  # method: holt
-  # window: 10sec
+scheduler:
+  method: holt
+  window: 10
