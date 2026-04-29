@@ -1,6 +1,9 @@
 # Kairos specific directories
 .idea/
-data/
+data/boolq/
+data/logiqa/
+data/mmlu/
+data/openbookqa/
 .venv/
 
 # Byte-compiled / optimized / DLL files
