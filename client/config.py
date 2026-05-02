@@ -26,8 +26,8 @@ def load_config(config_file: str) -> ClientConfig:
         dataset=client_config["dataset"],
         keep_logs=client_config.get("keep_logs", False),
         request_distribution=client_config["distribution"],
-        endpoint=client_config["endpoint"],
-        max_in_flight=client_config["max_in_flight"],
+        endpoint=client_config.get("endpoint", "/infer"),
+        max_in_flight=client_config.get("max_in_flight", 128),
     )
 
 
