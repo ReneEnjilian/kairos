@@ -75,15 +75,15 @@ def preprocess_openbookqa():
             )
 
             row = {
-                "Instruction": instruction,
-                "Prompt": (
+                "instruction": instruction,
+                "prompt": (
                     f"Question:\n{example['question_stem']}\n\n"
                     f"Options:\n{options_text}\n\n"
                     "Answer:"
                 ),
-                "Answer": example["answerKey"],
-                "Kairos": None,
-                "Correct": None,
+                "answer": example["answerKey"],
+                "kairos": None,
+                "correct": None,
             }
 
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
@@ -107,16 +107,16 @@ def preprocess_mmlu():
             )
 
             row = {
-                "Instruction": instruction,
-                "Prompt": (
+                "instruction": instruction,
+                "prompt": (
                     f"Subject:\n{example['subject']}\n\n"
                     f"Question:\n{example['question']}\n\n"
                     f"Options:\n{options_text}\n\n"
                     "Answer:"
                 ),
-                "Answer": str(example["answer"]),
-                "Kairos": None,
-                "Correct": None,
+                "answer": str(example["answer"]),
+                "kairos": None,
+                "correct": None,
             }
 
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
@@ -140,16 +140,16 @@ def preprocess_logiqa():
             )
 
             row = {
-                "Instruction": instruction,
-                "Prompt": (
+                "instruction": instruction,
+                "prompt": (
                     f"Context:\n{example['context']}\n\n"
                     f"Question:\n{example['query']}\n\n"
                     f"Options:\n{options_text}\n\n"
                     "Answer:"
                 ),
-                "Answer": str(example["correct_option"]),
-                "Kairos": None,
-                "Correct": None,
+                "answer": str(example["correct_option"]),
+                "kairos": None,
+                "correct": None,
             }
 
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
@@ -164,15 +164,15 @@ def preprocess_boolq():
     with output_path.open("w", encoding="utf-8") as f:
         for example in ds:
             row = {
-                "Instruction": BOOLQ_INSTRUCTION,
-                "Prompt": (
+                "instruction": BOOLQ_INSTRUCTION,
+                "prompt": (
                     f"Passage:\n{example['passage']}\n\n"
                     f"Question: {example['question']}\n\n"
                     "Answer:"
                 ),
-                "Answer": "yes" if example["answer"] else "no",
-                "Kairos": None,
-                "Correct": None,
+                "answer": "yes" if example["answer"] else "no",
+                "kairos": None,
+                "correct": None,
             }
             f.write(json.dumps(row) + "\n")
 
