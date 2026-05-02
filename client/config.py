@@ -10,6 +10,8 @@ class ClientConfig:
     dataset: str
     keep_logs: bool
     request_distribution: str
+    endpoint: str
+    max_in_flight: int
 
 
 def load_config(config_file: str) -> ClientConfig:
@@ -24,6 +26,8 @@ def load_config(config_file: str) -> ClientConfig:
         dataset=client_config["dataset"],
         keep_logs=client_config.get("keep_logs", False),
         request_distribution=client_config["distribution"],
+        endpoint=client_config["endpoint"],
+        max_in_flight=client_config["max_in_flight"],
     )
 
 

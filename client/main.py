@@ -15,7 +15,6 @@ def parse_args() -> argparse.Namespace:
 def main():
     args = parse_args()
     cfg = load_config(args.config_file)
-    #print(cfg)
     workload = Workload(cfg.dataset)
 
     for request in workload:
