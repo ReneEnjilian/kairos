@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import Awaitable, Callable
-
+from typing import Any
 import zmq
 import zmq.asyncio
 
@@ -31,7 +31,7 @@ class CoreIpcServer:
 
     async def recv_loop(
         self,
-        on_request: Callable[[bytes, dict], Awaitable[None]],
+        on_request: Callable[[bytes, dict[str, Any]], Awaitable[None]],
     ) -> None:
         self.bind()
         while True:
@@ -40,7 +40,7 @@ class CoreIpcServer:
             message = self._decode_message(payload)
             await on_request(identity, message)
 
-    async def send_reply(self, identity: bytes, reply: dict) -> None:
+    async def send_reply(self, identity: bytes, reply: dict[str, Any]) -> None:
         async with self._send_lock:
             await self.socket.send_multipart(
                 [identity, self._encode_message(reply)]
