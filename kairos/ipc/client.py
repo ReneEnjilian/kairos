@@ -18,7 +18,7 @@ class CoreIpcClient:
         self.context = zmq.asyncio.Context()
         self.socket = self.context.socket(zmq.DEALER)
 
-        self._pending: dict[str, asyncio.Future[str]] = {}
+        self._pending: dict[str, asyncio.Future[dict]] = {}
         self._recv_task: asyncio.Task[None] | None = None
 
     async def start(self) -> None:
@@ -26,11 +26,10 @@ class CoreIpcClient:
         self.socket.connect(self.address)
         self._recv_task = asyncio.create_task(self._recv_loop())
 
-    async def infer(self, payload: dict) -> str:
-        print("in ipc/client infer()")
+    async def infer(self, payload: dict) -> dict:
         request_id = str(uuid.uuid4())
         loop = asyncio.get_running_loop()
-        future: asyncio.Future[str] = loop.create_future()
+        future: asyncio.Future[dict] = loop.create_future()
         self._pending[request_id] = future
 
         message = {
@@ -43,7 +42,7 @@ class CoreIpcClient:
             await self.socket.send_json(message)
             return await future
         finally:
-            self._pending.pop(request_id, None)
+            _ = self._pending.pop(request_id, None)
 
     # awaits response from CoreIPCServer
     async def _recv_loop(self) -> None:
