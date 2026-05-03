@@ -26,7 +26,8 @@ class CoreIpcClient:
         self.socket.connect(self.address)
         self._recv_task = asyncio.create_task(self._recv_loop())
 
-    async def infer(self, payload: str) -> str:
+    async def infer(self, payload: dict) -> str:
+        print("in ipc/client infer()")
         request_id = str(uuid.uuid4())
         loop = asyncio.get_running_loop()
         future: asyncio.Future[str] = loop.create_future()

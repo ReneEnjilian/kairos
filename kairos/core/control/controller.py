@@ -46,7 +46,7 @@ class CoreController:
     async def handle_ipc_message(self, identity: bytes, message: dict) -> None:
         kind = message.get("kind")
         request_id = message.get("request_id")
-
+        print("in controller: handle_ipc_message")
         if kind != "infer_request":
             reply = {
                 "kind": "infer_result",
@@ -177,6 +177,7 @@ class CoreController:
     async def handle_infer(self, payload: str) -> str:
         # Placeholder.
         # Later this becomes the real call into your vLLM-side logic.
+        print("in handle_infer: final stage, yuhu!")
         return f"processed by core: {payload}"
 
     '''

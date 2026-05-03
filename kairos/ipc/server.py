@@ -34,8 +34,8 @@ class CoreIpcServer:
         on_request: Callable[[bytes, dict], Awaitable[None]],
     ) -> None:
         self.bind()
-
         while True:
+            print("in ipc/server recv_loop")
             identity, payload = await self.socket.recv_multipart()
             message = self._decode_message(payload)
             await on_request(identity, message)

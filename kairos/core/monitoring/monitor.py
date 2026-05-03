@@ -46,7 +46,7 @@ class CoreMonitor:
         self.memory_manager = memory_manager
 
     async def monitor_loop(self) -> None:
-        await self.initiate_model_servers()
+        #await self.initiate_model_servers()
         while True:
             item = await self.completion_queue.get()
             self.samples.append(item.payload)

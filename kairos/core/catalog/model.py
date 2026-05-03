@@ -77,9 +77,9 @@ class Model:
 
     def add_sample(self, result: str, latency: float) -> None:
         self.sample_results.append(SampleItem(result, latency))
-        if len(self.sample_results) >= self.sample_limit:
+        #if len(self.sample_results) >= self.sample_limit:
             # TODO: compute avg_latency, avg_accuracy
-            pass
+            #pass
 
     def set_storage_location_to_disk(self) -> None:
         self.storage_location = "disk"

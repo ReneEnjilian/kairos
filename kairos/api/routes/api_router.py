@@ -1,12 +1,20 @@
 from __future__ import annotations
-
+from pydantic import BaseModel
 from fastapi import APIRouter, Request
+
 router = APIRouter()
 
 
-@router.post("/infer")
-async def infer(request: Request):
-    print("[API] doing API work ...")
-    result = await request.app.state.core_client.infer("hello from api")
+class InferRequest(BaseModel):
+    instruction: str
+    prompt: str
+    answer: str
+    kairos: str | None = None
+    correct: bool | None = None
 
-    return {"message": result}
+
+@router.post("/infer")
+async def infer(req: InferRequest, request: Request):
+    result = await request.app.state.core_client.infer(req.model_dump())
+
+    return result

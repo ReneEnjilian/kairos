@@ -63,7 +63,7 @@ async def run() -> None:
                         keep_logs=cfg.keep_logs,
                     )
                 )
-                #break
+                break
 
                 # Later:
                 # await distribution.wait_next()
