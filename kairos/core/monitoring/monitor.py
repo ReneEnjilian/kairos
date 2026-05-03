@@ -12,8 +12,8 @@ logger = init_logger(__name__)
 
 @dataclass(slots=True)
 class CompletionItem:
-    payload: str
-    result: str
+    payload: dict
+    result: dict
 
 
 class CoreMonitor:
@@ -80,19 +80,19 @@ class CoreMonitor:
                 self.completion_queue.task_done()
 
     '''Methods used '''
-    async def notify_completion(self, payload: str, result: str) -> None:
+    async def notify_completion(self, payload: dict, result: dict) -> None:
         await self.completion_queue.put(
             CompletionItem(payload=payload, result=result)
         )
 
     async def pause_dispatch(self, reason: str = "monitor request") -> None:
         await self.control_queue.put(
-            ControlCommand(kind="PAUSE_DISPATCH", reason=reason)
+            ControlCommand(kind="PAUSE_DISPATCH")
         )
 
     async def resume_dispatch(self, reason: str = "monitor request") -> None:
         await self.control_queue.put(
-            ControlCommand(kind="RESUME_DISPATCH", reason=reason)
+            ControlCommand(kind="RESUME_DISPATCH")
         )
 
     def internal_work(self) -> None:

@@ -35,7 +35,6 @@ class CoreIpcServer:
     ) -> None:
         self.bind()
         while True:
-            print("in ipc/server recv_loop")
             identity, payload = await self.socket.recv_multipart()
             message = self._decode_message(payload)
             await on_request(identity, message)

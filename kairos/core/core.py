@@ -32,7 +32,7 @@ async def async_main() -> None:
     # For normal operation, use pause_after=None.
     # For testing, you can set pause_after=5 and watch dispatch stop.
     memory_manager = MemoryManager()
-    monitor = CoreMonitor(memory_manager=memory_manager, control_queue=control_queue, pause_after=5,
+    monitor = CoreMonitor(memory_manager=memory_manager, control_queue=control_queue, pause_after=None,
                           accuracy=accuracy, latency=latency, **knobs["monitoring"])
 
     controller = CoreController(

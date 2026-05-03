@@ -18,7 +18,7 @@ logger = init_logger(__name__)
 class RequestItem:
     identity: bytes
     request_id: str
-    payload: str
+    payload: dict
 
 
 class CoreController:
@@ -46,7 +46,7 @@ class CoreController:
     async def handle_ipc_message(self, identity: bytes, message: dict) -> None:
         kind = message.get("kind")
         request_id = message.get("request_id")
-        print("in controller: handle_ipc_message")
+
         if kind != "infer_request":
             reply = {
                 "kind": "infer_result",
@@ -58,12 +58,12 @@ class CoreController:
             return
 
         payload = message.get("payload")
-        if not isinstance(payload, str):
+        if not isinstance(payload, dict):
             reply = {
                 "kind": "infer_result",
                 "request_id": request_id,
                 "ok": False,
-                "error": "Payload must be a string.",
+                "error": "Payload must be an object.",
             }
             await self.ipc_server.send_reply(identity, reply)
             return
@@ -174,11 +174,17 @@ class CoreController:
     '''
     Methods for dispatcher:
     '''
-    async def handle_infer(self, payload: str) -> str:
-        # Placeholder.
+    async def handle_infer(self, payload: dict) -> dict:
         # Later this becomes the real call into your vLLM-side logic.
-        print("in handle_infer: final stage, yuhu!")
-        return f"processed by core: {payload}"
+        # avoid mutating the original payload object in-place.
+        # Why: payload is also passed to the monitor later
+        # Keeping the original request unchanged is cleaner
+        result = dict(payload)
+
+        result["kairos"] = "no"
+        result["correct"] = result["answer"] == result["kairos"]
+
+        return result
 
     '''
     Methods for controller:
