@@ -4,6 +4,7 @@ data/boolq/
 data/logiqa/
 data/mmlu/
 data/openbookqa/
+logs/
 .venv/
 
 # Byte-compiled / optimized / DLL files

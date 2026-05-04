@@ -7,7 +7,7 @@ from typing import Any
 
 
 class ResultLogger:
-    def __init__(self, filename: str) -> None:
+    def __init__(self, filename: str = "client_results.jsonl") -> None:
         project_root = Path(__file__).resolve().parent.parent
         self.log_dir = project_root / "logs"
         self.log_path = self.log_dir / filename
