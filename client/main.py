@@ -42,7 +42,7 @@ async def send_and_record(
 async def run() -> None:
     args = parse_args()
     cfg = load_config(args.config)
-
+    print(cfg.workload_pattern)
     workload = Workload(cfg.dataset)
     semaphore = asyncio.Semaphore(cfg.max_in_flight)
 

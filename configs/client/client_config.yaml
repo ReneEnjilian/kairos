@@ -1,7 +1,12 @@
 client:
   dataset: boolq
-  distribution: poisson
   kairos_port: 8000
   endpoint: /infer
   keep_logs: true
   max_in_flight: 128
+  max_requests: 10000
+  random_seed: 42
+
+workload_pattern:
+  type: poisson
+  rate: 2.0
