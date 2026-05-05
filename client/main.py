@@ -65,9 +65,7 @@ async def run() -> None:
             async with asyncio.TaskGroup() as task_group:
                 first_request = True
 
-                for request_index, request in enumerate(workload):
-                    if cfg.max_requests is not None and request_index >= cfg.max_requests:
-                        break
+                for request_index, request in enumerate(workload.iter_requests(cfg.max_requests)):
 
                     if not first_request:
                         await distribution.wait_next()
