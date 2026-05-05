@@ -7,6 +7,7 @@ from client.config import load_config
 from client.sender import Sender, SenderResult
 from client.workload import Workload
 from client.logs import ResultLogger
+from client.distribution import create_distribution
 
 
 def parse_args() -> argparse.Namespace:
@@ -42,9 +43,14 @@ async def send_and_record(
 async def run() -> None:
     args = parse_args()
     cfg = load_config(args.config)
-    print(cfg.workload_pattern)
+
     workload = Workload(cfg.dataset)
     semaphore = asyncio.Semaphore(cfg.max_in_flight)
+
+    distribution = create_distribution(
+        config=cfg.workload_pattern,
+        random_seed=cfg.random_seed,
+    )
 
     logger = ResultLogger() if cfg.keep_logs else None
 
@@ -57,7 +63,17 @@ async def run() -> None:
             endpoint=cfg.endpoint,
         ) as sender:
             async with asyncio.TaskGroup() as task_group:
+                first_request = True
+
                 for request_index, request in enumerate(workload):
+                    if cfg.max_requests is not None and request_index >= cfg.max_requests:
+                        break
+
+                    if not first_request:
+                        await distribution.wait_next()
+
+                    first_request = False
+
                     await semaphore.acquire()
 
                     task_group.create_task(
@@ -69,7 +85,6 @@ async def run() -> None:
                             logger=logger,
                         )
                     )
-                    break
 
                     # Later:
                     # await distribution.wait_next()
