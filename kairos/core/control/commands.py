@@ -7,6 +7,7 @@ from kairos.core.catalog.model import Model
 ControlKind = Literal[
     "PAUSE_DISPATCH",
     "RESUME_DISPATCH",
+    "SET_ACTIVE_MODEL",
     "START_MODEL_SERVER",
     "STOP_MODEL_SERVER",
     "L1_SLEEP",

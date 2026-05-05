@@ -3,6 +3,8 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 from typing import List
+
+from kairos.core.catalog.model import Model
 from kairos.core.control.commands import ControlCommand
 from kairos.core.memory.memory_manager import MemoryManager
 from kairos.logger import init_logger
@@ -46,6 +48,7 @@ class CoreMonitor:
         self.memory_manager = memory_manager
 
     async def monitor_loop(self) -> None:
+        await self.set_active_model(self.catalog.get_baseline())
         #await self.initiate_model_servers()
         while True:
             item = await self.completion_queue.get()
@@ -120,4 +123,12 @@ class CoreMonitor:
                     model=base_model,
                 )
             )
+
+    async def set_active_model(self, model: Model) -> None:
+        await self.control_queue.put(
+            ControlCommand(
+                kind="SET_ACTIVE_MODEL",
+                model=model,
+            )
+        )
 

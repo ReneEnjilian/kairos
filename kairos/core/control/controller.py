@@ -38,7 +38,7 @@ class CoreController:
         self.dispatch_enabled = asyncio.Event()
         self.dispatch_enabled.set()
 
-        self.active_model = "baseline"
+        self.active_model: Model | None = None
 
         self.docker = DockerContainer()
         self.sample_rate = sample_rate
@@ -161,18 +161,24 @@ class CoreController:
                             "Dispatch paused."
                         )
 
-                elif command.kind == "RESUME_DISPATCH":
+                if command.kind == "RESUME_DISPATCH":
                     if not self.dispatch_enabled.is_set():
                         self.dispatch_enabled.set()
                         logger.info(
                             "Dispatch resumed."
                         )
 
+                if command.kind == "SET_ACTIVE_MODEL":
+                    # TODO: Think about requests not returned yet
+                    self.active_model = command.model
+
             finally:
                 self.control_queue.task_done()
 
     '''
     Methods for dispatcher:
+    '''
+
     '''
     async def handle_infer(self, payload: dict) -> dict:
         # Later this becomes the real call into your vLLM-side logic.
@@ -185,6 +191,9 @@ class CoreController:
         result["correct"] = result["answer"] == result["kairos"]
 
         return result
+    '''
+    async def handle_infer(self, payload: dict) -> dict:
+        pass
 
     '''
     Methods for controller:
