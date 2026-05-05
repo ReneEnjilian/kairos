@@ -9,7 +9,8 @@ from kairos.ipc.server import CoreIpcServer
 from kairos.logger import init_logger
 from kairos.core.vllm.docker import DockerContainer
 from kairos.core.catalog.model import Model
-from kairos.core.vllm.sleep_mode import *
+# from kairos.core.vllm.sleep_mode import *
+from kairos.core.vllm.vllm_client import VllmClient
 
 logger = init_logger(__name__)
 
@@ -41,6 +42,8 @@ class CoreController:
         self.active_model: Model | None = None
 
         self.docker = DockerContainer()
+        self.vllm_client = VllmClient()
+
         self.sample_rate = sample_rate
 
     async def handle_ipc_message(self, identity: bytes, message: dict) -> None:
@@ -113,7 +116,7 @@ class CoreController:
                 self.request_queue.task_done()
 
     async def control_loop(self) -> None:
-        #await self.initiate_model_servers()
+        # await self.initiate_model_servers()
         while True:
             command = await self.control_queue.get()
 
@@ -192,8 +195,26 @@ class CoreController:
 
         return result
     '''
+
+    def _normalize_answer(self, answer: str) -> str:
+        return answer.strip().lower()
+
     async def handle_infer(self, payload: dict) -> dict:
-        pass
+        active_model = self.active_model
+
+        kairos_answer = await self.vllm_client.chat_completion(
+            port=active_model.port,
+            model_id=active_model.model_id,
+            instruction=payload["instruction"],
+            prompt=payload["prompt"]
+        )
+
+        result = dict(payload)
+
+        result["kairos"] = kairos_answer
+        result["correct"] = self._normalize_answer(payload["answer"]) == self._normalize_answer(kairos_answer)
+
+        return result
 
     '''
     Methods for controller:
@@ -211,12 +232,12 @@ class CoreController:
         # ensure that base model starts in GPU, quantized in CPU, rest in RAM
         # TODO: add new field to command -> location
         if model.relation == "quantized":
-            await sleep_level_1(model.port)
+            await self.vllm_client.sleep_level_1(model.port)
             model.set_storage_location_to_cpu()
         elif model.relation == "base":
             model.set_storage_location_to_gpu()
         else:
-            await sleep_level_2(model.port)
+            await self.vllm_client.sleep_level_2(model.port)
             model.set_storage_location_to_disk()
 
     async def stop_model_server(self, model: Model) -> None:
@@ -232,50 +253,42 @@ class CoreController:
         logger.info("Shutting down containers.")
 
     async def sleep_level_1(self, model: Model) -> None:
-        await sleep_level_1(model.port)
+        await self.vllm_client.sleep_level_1(model.port)
         model.set_storage_location_to_cpu()
         logger.info(f"Sleeping {model.name} on CPU")
 
     async def sleep_level_2(self, model: Model) -> None:
-        await sleep_level_2(model.port)
+        await self.vllm_client.sleep_level_2(model.port)
         model.set_storage_location_to_disk()
         logger.info(f"Sleeping {model.name} on disk")
 
     async def wake_up_from_cpu(self, model: Model) -> None:
-        await wake_up(model.port)
+        await self.vllm_client.wake_up(model.port)
         model.set_storage_location_to_gpu()
         logger.info(f"waking {model.name} from CPU RAM.")
 
     async def wake_up_from_cpu_persistent(self, model: Model) -> None:
-        await wake_up_persistent(model.port)
+        await self.vllm_client.wake_up_persistent(model.port)
         model.set_storage_location_to_gpu()
         logger.info(f"waking {model.name} from CPU RAM while keeping weight in RAM.")
 
     async def wake_up_from_disk(self, model: Model) -> None:
         port = model.port
-        await wake_up(port)
-        await reload_weights(port)
-        await reset_prefix_cache(port)
+        await self.vllm_client.wake_up(port)
+        await self.vllm_client.reload_weights(port)
+        await self.vllm_client.reset_prefix_cache(port)
         model.set_storage_location_to_gpu()
         logger.info(f"Waking {model.name} from disk.")
 
     async def prefetch_weights(self, model: Model) -> None:
-        await prefetch(model.port)
+        await self.vllm_client.prefetch(model.port)
         model.set_storage_location_to_cpu()
         logger.info(f"Prefetching {model.name} weights into CPU RAM.")
 
     async def wake_up_from_prefetch(self, model: Model) -> None:
         port = model.port
-        await wake_up(port)
-        await reload_weights_from_prefetch(port)
-        await reset_prefix_cache(port)
+        await self.vllm_client.wake_up(port)
+        await self.vllm_client.reload_weights_from_prefetch(port)
+        await self.vllm_client.reset_prefix_cache(port)
         model.set_storage_location_to_gpu()
         logger.info(f"Waking {model.name} from prefetch.")
-
-
-
-
-
-
-
-
