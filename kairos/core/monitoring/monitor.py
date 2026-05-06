@@ -49,7 +49,8 @@ class CoreMonitor:
 
     async def monitor_loop(self) -> None:
         await self.set_active_model(self.catalog.get_baseline())
-        #await self.initiate_model_servers()
+        await self.initiate_model_servers()
+
         while True:
             item = await self.completion_queue.get()
             self.samples.append(item.payload)

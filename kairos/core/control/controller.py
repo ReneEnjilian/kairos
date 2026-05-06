@@ -46,6 +46,11 @@ class CoreController:
 
         self.sample_rate = sample_rate
 
+        # For continous batching
+        self.max_in_flight = 32
+        self.inflight_semaphore = asyncio.Semaphore(self.max_in_flight)
+        self._inflight_tasks: set[asyncio.Task[None]] = set()
+
     async def handle_ipc_message(self, identity: bytes, message: dict) -> None:
         kind = message.get("kind")
         request_id = message.get("request_id")
@@ -114,6 +119,51 @@ class CoreController:
 
             finally:
                 self.request_queue.task_done()
+
+    '''
+    async def dispatch_loop(self) -> None:
+        while True:
+            request = await self.request_queue.get()
+            await self.dispatch_enabled.wait()
+
+            await self.inflight_semaphore.acquire()
+
+            task = asyncio.create_task(
+                self._process_request(request)
+            )
+            self._inflight_tasks.add(task)
+            task.add_done_callback(self._inflight_tasks.discard)
+    '''
+    async def _process_request(self, request: RequestItem) -> None:
+        try:
+            result = await self.handle_infer(request.payload)
+
+            reply = {
+                "kind": "infer_result",
+                "request_id": request.request_id,
+                "ok": True,
+                "result": result,
+            }
+            await self.ipc_server.send_reply(request.identity, reply)
+
+            if self.monitor is not None:
+                await self.monitor.notify_completion(
+                    payload=request.payload,
+                    result=result,
+                )
+
+        except Exception as e:
+            reply = {
+                "kind": "infer_result",
+                "request_id": request.request_id,
+                "ok": False,
+                "error": str(e),
+            }
+            await self.ipc_server.send_reply(request.identity, reply)
+
+        finally:
+            self.request_queue.task_done()
+            self.inflight_semaphore.release()
 
     async def control_loop(self) -> None:
         # await self.initiate_model_servers()
