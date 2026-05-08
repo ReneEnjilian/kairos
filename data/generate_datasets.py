@@ -86,6 +86,7 @@ def preprocess_openbookqa():
                 "correct": None,
                 "arrival_timestamp": None,
                 "infer_latency_ms": None,
+                "active_model": None,
             }
 
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
@@ -121,6 +122,7 @@ def preprocess_mmlu():
                 "correct": None,
                 "arrival_timestamp": None,
                 "infer_latency_ms": None,
+                "active_model": None,
             }
 
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
@@ -156,6 +158,7 @@ def preprocess_logiqa():
                 "correct": None,
                 "arrival_timestamp": None,
                 "infer_latency_ms": None,
+                "active_model": None,
             }
 
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
@@ -181,6 +184,7 @@ def preprocess_boolq():
                 "correct": None,
                 "arrival_timestamp": None,
                 "infer_latency_ms": None,
+                "active_model": None,
             }
             f.write(json.dumps(row) + "\n")
 

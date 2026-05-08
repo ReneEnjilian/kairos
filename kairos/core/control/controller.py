@@ -272,6 +272,7 @@ class CoreController:
         result["kairos"] = completion.text
         result["correct"] = self._normalize_answer(result["answer"]) == self._normalize_answer(result["kairos"])
         result["infer_latency_ms"] = completion.latency_ms
+        result["active_model"] = active_model.model_id
 
         return result
 

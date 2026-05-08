@@ -13,6 +13,7 @@ class InferRequest(BaseModel):
     correct: bool | None = None
     arrival_timestamp: float | None = None
     infer_latency_ms: float | None = None
+    active_model: str | None = None
 
 
 @router.post("/infer")
