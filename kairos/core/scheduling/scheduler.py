@@ -4,6 +4,7 @@ import asyncio
 from collections import deque
 from kairos.core.memory.memory_manager import MemoryManager
 from kairos.core.control.commands import ControlCommand
+from kairos.core.catalog.model_variants_catalog import ModelVariantsCatalog
 from kairos.logger import init_logger
 
 logger = init_logger(__name__)
@@ -24,9 +25,10 @@ class CoreScheduler:
 
         self.job_queue: asyncio.Queue = asyncio.Queue()
         self.arrival_timestamps: deque[float] = deque(maxlen=1000)
+        self.catalog = ModelVariantsCatalog()
 
     async def scheduling_loop(self) -> None:
-        print(self.method)
+        await self.initiate_model_servers()
         while True:
             job = await self.job_queue.get()
 
@@ -41,6 +43,44 @@ class CoreScheduler:
         # 3. forecast idle window
         # 4. emit controller commands in safe order
         pass
+
+    async def warmup(self) -> None:
+        '''
+        - use baseline model for this
+        start -> GPU
+        L2 -> disk
+        prefetch -> RAM
+        wake_from_prefetch -> GPU
+        L1 -> RAM
+        wake_persistent -> GPU
+        L1 -> RAM
+        evict -> disk
+        '''
+        pass
+
+    async def initiate_model_servers(self) -> None:
+        models = self.catalog.get_catalog()
+        base_model = None
+        for model in models.values():
+            if model.relation == "base":
+                base_model = model
+            if model.relation != "base":
+                await self.control_queue.put(
+                   ControlCommand(
+                       kind="START_MODEL_SERVER",
+                       model=model,
+                   )
+                )
+        # ensure that base model is last in queue
+        if base_model is not None:
+            await self.control_queue.put(
+                ControlCommand(
+                    kind="START_MODEL_SERVER",
+                    model=base_model,
+                )
+            )
+
+    '''Timestamps-related methods'''
 
     def record_arrival(self, timestamp: float) -> None:
         self.arrival_timestamps.append(timestamp)

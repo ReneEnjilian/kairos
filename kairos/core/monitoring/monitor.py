@@ -9,6 +9,7 @@ from kairos.core.control.commands import ControlCommand
 from kairos.core.memory.memory_manager import MemoryManager
 from kairos.logger import init_logger
 from kairos.core.catalog.model_variants_catalog import ModelVariantsCatalog
+
 logger = init_logger(__name__)
 
 
@@ -49,8 +50,6 @@ class CoreMonitor:
 
     async def monitor_loop(self) -> None:
         await self.set_active_model(self.catalog.get_baseline())
-        await self.initiate_model_servers()
-
         while True:
             item = await self.completion_queue.get()
             self.samples.append(item.payload)
@@ -103,27 +102,7 @@ class CoreMonitor:
         for i in range(5):
             print(f"internal op: {i}")
 
-    async def initiate_model_servers(self) -> None:
-        models = self.catalog.get_catalog()
-        base_model = None
-        for model in models.values():
-            if model.relation == "base":
-                base_model = model
-            if model.relation != "base":
-                await self.control_queue.put(
-                   ControlCommand(
-                       kind="START_MODEL_SERVER",
-                       model=model,
-                   )
-                )
-        # ensure that base model is last in queue
-        if base_model is not None:
-            await self.control_queue.put(
-                ControlCommand(
-                    kind="START_MODEL_SERVER",
-                    model=base_model,
-                )
-            )
+
 
     async def set_active_model(self, model: Model) -> None:
         await self.control_queue.put(
