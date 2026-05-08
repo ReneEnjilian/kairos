@@ -84,6 +84,8 @@ def preprocess_openbookqa():
                 "answer": example["answerKey"],
                 "kairos": None,
                 "correct": None,
+                "arrival_timestamp": None,
+                "infer_latency_ms": None,
             }
 
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
@@ -117,6 +119,8 @@ def preprocess_mmlu():
                 "answer": str(example["answer"]),
                 "kairos": None,
                 "correct": None,
+                "arrival_timestamp": None,
+                "infer_latency_ms": None,
             }
 
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
@@ -150,6 +154,8 @@ def preprocess_logiqa():
                 "answer": str(example["correct_option"]),
                 "kairos": None,
                 "correct": None,
+                "arrival_timestamp": None,
+                "infer_latency_ms": None,
             }
 
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
@@ -173,6 +179,8 @@ def preprocess_boolq():
                 "answer": "yes" if example["answer"] else "no",
                 "kairos": None,
                 "correct": None,
+                "arrival_timestamp": None,
+                "infer_latency_ms": None,
             }
             f.write(json.dumps(row) + "\n")
 

@@ -10,7 +10,7 @@ from kairos.logger import init_logger
 from kairos.core.vllm.docker import DockerContainer
 from kairos.core.catalog.model import Model
 # from kairos.core.vllm.sleep_mode import *
-from kairos.core.vllm.vllm_client import VllmClient
+from kairos.core.vllm.vllm_client import VLLMClient
 
 logger = init_logger(__name__)
 
@@ -42,12 +42,12 @@ class CoreController:
         self.active_model: Model | None = None
 
         self.docker = DockerContainer()
-        self.vllm_client = VllmClient()
+        self.vllm_client = VLLMClient()
 
         self.sample_rate = sample_rate
 
         # For continous batching
-        self.max_in_flight = 32
+        self.max_in_flight = 64
         self.inflight_semaphore = asyncio.Semaphore(self.max_in_flight)
         self._inflight_tasks: set[asyncio.Task[None]] = set()
 
@@ -84,6 +84,7 @@ class CoreController:
             )
         )
 
+    '''
     async def dispatch_loop(self) -> None:
         while True:
             print("dispatch")
@@ -119,8 +120,8 @@ class CoreController:
 
             finally:
                 self.request_queue.task_done()
-
     '''
+
     async def dispatch_loop(self) -> None:
         while True:
             request = await self.request_queue.get()
@@ -133,7 +134,7 @@ class CoreController:
             )
             self._inflight_tasks.add(task)
             task.add_done_callback(self._inflight_tasks.discard)
-    '''
+
     async def _process_request(self, request: RequestItem) -> None:
         try:
             result = await self.handle_infer(request.payload)
@@ -252,7 +253,7 @@ class CoreController:
     async def handle_infer(self, payload: dict) -> dict:
         active_model = self.active_model
 
-        kairos_answer = await self.vllm_client.chat_completion(
+        completion = await self.vllm_client.chat_completion(
             port=active_model.port,
             model_id=active_model.model_id,
             instruction=payload["instruction"],
@@ -261,8 +262,9 @@ class CoreController:
 
         result = dict(payload)
 
-        result["kairos"] = kairos_answer
-        result["correct"] = self._normalize_answer(payload["answer"]) == self._normalize_answer(kairos_answer)
+        result["kairos"] = completion.text
+        result["correct"] = self._normalize_answer(result["answer"]) == self._normalize_answer(result["kairos"])
+        result["infer_latency_ms"] = completion.latency_ms
 
         return result
 

@@ -11,12 +11,16 @@ class InferRequest(BaseModel):
     answer: str
     kairos: str | None = None
     correct: bool | None = None
+    arrival_timestamp: float | None = None
+    infer_latency_ms: float | None = None
 
 
 @router.post("/infer")
 async def infer(req: InferRequest, request: Request):
-    t0 = time.time()
-    result = await request.app.state.core_client.infer(req.model_dump())
-    t1 = time.time()
-    print(f"time for complete round: {(t1 - t0)*1000}")
+    payload = req.model_dump()
+
+    payload["arrival_timestamp"] = time.time()
+
+    result = await request.app.state.core_client.infer(payload)
+
     return result

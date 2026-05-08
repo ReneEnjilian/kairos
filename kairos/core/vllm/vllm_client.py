@@ -1,14 +1,21 @@
 from __future__ import annotations
 
 from typing import Any
+from dataclasses import dataclass
 import httpx
-
+import time
 from kairos.logger import init_logger
 
 logger = init_logger(__name__)
 
 
-class VllmClient:
+@dataclass(slots=True)
+class VLLMCompletionResult:
+    text: str
+    latency_ms: float
+
+
+class VLLMClient:
     def __init__(self):
         self._client = httpx.AsyncClient()
 
@@ -101,7 +108,7 @@ class VllmClient:
         max_tokens: int = 4,
         temperature: float = 0.0,
         timeout: float = 30.0,
-    ) -> str:
+    ) -> VLLMCompletionResult:
         url = f"http://localhost:{port}/v1/chat/completions"
 
         request_body: dict[str, Any] = {
@@ -120,17 +127,25 @@ class VllmClient:
             "max_tokens": max_tokens,
         }
 
+        start = time.perf_counter()
+
         response = await self._client.post(
             url,
             json=request_body,
             timeout=timeout,
         )
 
+        end = time.perf_counter()
+        latency_ms = (end - start) * 1000
+
         response.raise_for_status()
 
         response_body = response.json()
         content = response_body["choices"][0]["message"]["content"]
 
-        return content.strip()
+        return VLLMCompletionResult(
+            text=content.strip().lower(),
+            latency_ms=latency_ms,
+        )
 
 
