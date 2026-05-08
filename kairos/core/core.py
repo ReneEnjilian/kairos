@@ -28,14 +28,14 @@ async def async_main() -> None:
 
     control_queue: asyncio.Queue[ControlCommand] = asyncio.Queue()
     accuracy, latency = parse_objectives_from_config(config_path)
-    knobs = parse_monitoring_from_config(config_path)
+    monitoring = parse_monitoring_from_config(config_path)
 
     memory_manager = MemoryManager()
     monitor = CoreMonitor(
         memory_manager=memory_manager,
         accuracy=accuracy,
         latency=latency,
-        **knobs["monitoring"]
+        **monitoring,
     )
 
     scheduling = parse_scheduling_from_config(config_path)
@@ -50,7 +50,6 @@ async def async_main() -> None:
         control_queue=control_queue,
         monitor=monitor,
         scheduler=scheduler,
-        **knobs["control"]
     )
 
     ipc_task = asyncio.create_task(

@@ -30,7 +30,6 @@ class CoreController:
         control_queue: asyncio.Queue[ControlCommand],
         monitor: CoreMonitor | None = None,
         scheduler: CoreScheduler | None = None,
-        sample_rate: int = 30
     ) -> None:
         self.ipc_server = ipc_server
         self.control_queue = control_queue
@@ -47,7 +46,8 @@ class CoreController:
         self.docker = DockerContainer()
         self.vllm_client = VLLMClient()
 
-        self.sample_rate = sample_rate
+
+
 
         # For continous batching
         self.max_in_flight = 64

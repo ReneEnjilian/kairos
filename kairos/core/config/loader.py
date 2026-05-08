@@ -53,30 +53,14 @@ def parse_objectives_from_config(config_path: Path):
     return accuracy, latency
 
 
-def parse_monitoring_from_config(config_path: Path):
+def parse_monitoring_from_config(config_path: Path) -> dict:
     with open(config_path, "r") as f:
         registration_data = yaml.safe_load(f)
-    monitoring_data = {}
-    monitoring_data['control'] = {}
-    monitoring_data['monitoring'] = {}
-
     monitoring_knobs = registration_data.get("monitoring")
-    control = {}
-    monitoring = {}
-
-    for knob in monitoring_knobs:
-        if knob == "sample_rate":
-            control[knob] = monitoring_knobs[knob]
-        else:
-            monitoring[knob] = monitoring_knobs[knob]
-
-    monitoring_data['control'] = control
-    monitoring_data['monitoring'] = monitoring
-
-    return monitoring_data
+    return monitoring_knobs
 
 
-def parse_scheduling_from_config(config_path: Path):
+def parse_scheduling_from_config(config_path: Path) -> dict:
     with open(config_path, "r") as f:
         registration_data = yaml.safe_load(f)
     scheduling = registration_data.get("scheduler")

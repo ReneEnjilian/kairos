@@ -28,6 +28,7 @@ class CoreMonitor:
         discard: bool = False,
         recycle: bool = False,
         sample_size: int = 100,
+        sample_rate: int = 50,
     ) -> None:
 
         self.completion_queue: asyncio.Queue[CompletionItem] = asyncio.Queue()
@@ -35,13 +36,15 @@ class CoreMonitor:
         self.samples: List[str] = []    # only payload, results are stored in individual models
         self.catalog = ModelVariantsCatalog()
         self.current_model = self.catalog.get_baseline()
+
         self.accuracy = accuracy
         self.latency = latency
         self.monotonicity = monotonicity
         self.discard = discard
         self.recycle = recycle
         self.sample_size = sample_size
-        self.memory_manager = memory_manager
+        self.mem = memory_manager
+        self.sample_rate = sample_rate
 
     async def monitor_loop(self) -> None:
 
