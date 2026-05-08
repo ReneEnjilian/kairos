@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from kairos.core.control.commands import ControlCommand
 from kairos.core.monitoring.monitor import CoreMonitor
+from kairos.core.scheduling.scheduler import CoreScheduler
 from kairos.ipc.server import CoreIpcServer
 from kairos.logger import init_logger
 from kairos.core.vllm.docker import DockerContainer
@@ -28,11 +29,13 @@ class CoreController:
         ipc_server: CoreIpcServer,
         control_queue: asyncio.Queue[ControlCommand],
         monitor: CoreMonitor | None = None,
+        scheduler: CoreScheduler | None = None,
         sample_rate: int = 30
     ) -> None:
         self.ipc_server = ipc_server
         self.control_queue = control_queue
         self.monitor = monitor
+        self.scheduler = scheduler
 
         self.request_queue: asyncio.Queue[RequestItem] = asyncio.Queue()
 
@@ -75,6 +78,10 @@ class CoreController:
             }
             await self.ipc_server.send_reply(identity, reply)
             return
+
+        arrival_timestamp = payload.get("arrival_timestamp")
+        if arrival_timestamp is not None:
+            self.scheduler.record_arrival(arrival_timestamp)
 
         await self.request_queue.put(
             RequestItem(

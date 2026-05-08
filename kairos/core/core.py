@@ -35,17 +35,19 @@ async def async_main() -> None:
     monitor = CoreMonitor(memory_manager=memory_manager, control_queue=control_queue, pause_after=None,
                           accuracy=accuracy, latency=latency, **knobs["monitoring"])
 
+    scheduling = parse_scheduling_from_config(config_path)
+    scheduler = CoreScheduler(
+        memory_manager=memory_manager,
+        control_queue=control_queue,
+        **scheduling,
+    )
+
     controller = CoreController(
         ipc_server=ipc_server,
         control_queue=control_queue,
         monitor=monitor,
+        scheduler=scheduler,
         **knobs["control"]
-    )
-
-    scheduling = parse_scheduling_from_config(config_path)
-    scheduler = CoreScheduler(
-        memory_manager=memory_manager,
-        **scheduling,
     )
 
     ipc_task = asyncio.create_task(
