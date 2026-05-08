@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 from typing import List
+from collections import deque
 
 from kairos.core.catalog.model import Model
 from kairos.core.memory.memory_manager import MemoryManager
@@ -13,9 +14,10 @@ logger = init_logger(__name__)
 
 
 @dataclass(slots=True)
-class CompletionItem:
+class SampleItem:
     payload: dict
     result: dict
+    #model: Model
 
 
 class CoreMonitor:
@@ -31,8 +33,7 @@ class CoreMonitor:
         sample_rate: int = 50,
     ) -> None:
 
-        self.sample_queue: asyncio.Queue[CompletionItem] = asyncio.Queue()
-        self.samples: List[str] = []    # only payload, results are stored in individual models
+        self.sample_queue: asyncio.Queue[SampleItem] = asyncio.Queue()
         self.catalog = ModelVariantsCatalog()
 
         self.accuracy = accuracy
@@ -45,16 +46,15 @@ class CoreMonitor:
         self.sample_rate = sample_rate
 
         self.request_counter = 0
+        self.samples: deque[dict] = deque(maxlen=self.sample_size)
 
     async def monitor_loop(self) -> None:
 
         while True:
             item = await self.sample_queue.get()
-            #self.samples.append(item.payload)
-            #self.current_model.add_sample(item.result, 0.0) # ignore latency for now
 
             try:
-                print("test")
+                self.samples.append(item.payload)
 
             finally:
                 self.sample_queue.task_done()
@@ -63,7 +63,7 @@ class CoreMonitor:
 
     async def sample_request(self, payload: dict, result: dict) -> None:
         await self.sample_queue.put(
-            CompletionItem(payload=payload, result=result)
+            SampleItem(payload=payload, result=result)
         )
 
     def should_sample_request(self) -> bool:
