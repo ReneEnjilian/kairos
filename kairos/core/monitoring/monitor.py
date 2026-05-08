@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from typing import List
 
 from kairos.core.catalog.model import Model
-from kairos.core.control.commands import ControlCommand
 from kairos.core.memory.memory_manager import MemoryManager
 from kairos.logger import init_logger
 from kairos.core.catalog.model_variants_catalog import ModelVariantsCatalog
@@ -22,9 +21,7 @@ class CompletionItem:
 class CoreMonitor:
     def __init__(
         self,
-        control_queue: asyncio.Queue[ControlCommand],
         memory_manager: MemoryManager,
-        pause_after: int | None = None,
         accuracy: float | None = None,
         latency: float | None = None,
         monotonicity: bool = False,
@@ -32,8 +29,6 @@ class CoreMonitor:
         recycle: bool = False,
         sample_size: int = 100,
     ) -> None:
-        self.control_queue = control_queue
-        self.pause_after = pause_after
 
         self.completion_queue: asyncio.Queue[CompletionItem] = asyncio.Queue()
         self.completion_count = 0

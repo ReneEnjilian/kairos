@@ -29,11 +29,14 @@ async def async_main() -> None:
     control_queue: asyncio.Queue[ControlCommand] = asyncio.Queue()
     accuracy, latency = parse_objectives_from_config(config_path)
     knobs = parse_monitoring_from_config(config_path)
-    # For normal operation, use pause_after=None.
-    # For testing, you can set pause_after=5 and watch dispatch stop.
+
     memory_manager = MemoryManager()
-    monitor = CoreMonitor(memory_manager=memory_manager, control_queue=control_queue, pause_after=None,
-                          accuracy=accuracy, latency=latency, **knobs["monitoring"])
+    monitor = CoreMonitor(
+        memory_manager=memory_manager,
+        accuracy=accuracy,
+        latency=latency,
+        **knobs["monitoring"]
+    )
 
     scheduling = parse_scheduling_from_config(config_path)
     scheduler = CoreScheduler(
