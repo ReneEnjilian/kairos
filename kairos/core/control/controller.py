@@ -21,6 +21,7 @@ class RequestItem:
     identity: bytes
     request_id: str
     payload: dict
+    sampled: bool = False
 
 
 class CoreController:
@@ -28,8 +29,8 @@ class CoreController:
         self,
         ipc_server: CoreIpcServer,
         control_queue: asyncio.Queue[ControlCommand],
-        monitor: CoreMonitor | None = None,
-        scheduler: CoreScheduler | None = None,
+        monitor: CoreMonitor,
+        scheduler: CoreScheduler,
     ) -> None:
         self.ipc_server = ipc_server
         self.control_queue = control_queue
@@ -46,10 +47,7 @@ class CoreController:
         self.docker = DockerContainer()
         self.vllm_client = VLLMClient()
 
-
-
-
-        # For continous batching
+        # For continuous batching
         self.max_in_flight = 64
         self.inflight_semaphore = asyncio.Semaphore(self.max_in_flight)
         self._inflight_tasks: set[asyncio.Task[None]] = set()
@@ -83,11 +81,15 @@ class CoreController:
         if arrival_timestamp is not None:
             self.scheduler.record_arrival(arrival_timestamp)
 
+        sampled = False
+        sampled = self.monitor.should_sample_request()
+
         await self.request_queue.put(
             RequestItem(
                 identity=identity,
                 request_id=request_id,
                 payload=payload,
+                sampled=sampled,
             )
         )
 
@@ -154,8 +156,8 @@ class CoreController:
             }
             await self.ipc_server.send_reply(request.identity, reply)
 
-            if self.monitor is not None:
-                await self.monitor.notify_completion(
+            if request.sampled:
+                await self.monitor.sample_request(
                     payload=request.payload,
                     result=result,
                 )

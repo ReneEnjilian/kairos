@@ -31,11 +31,9 @@ class CoreMonitor:
         sample_rate: int = 50,
     ) -> None:
 
-        self.completion_queue: asyncio.Queue[CompletionItem] = asyncio.Queue()
-        self.completion_count = 0
+        self.sample_queue: asyncio.Queue[CompletionItem] = asyncio.Queue()
         self.samples: List[str] = []    # only payload, results are stored in individual models
         self.catalog = ModelVariantsCatalog()
-        self.current_model = self.catalog.get_baseline()
 
         self.accuracy = accuracy
         self.latency = latency
@@ -46,10 +44,12 @@ class CoreMonitor:
         self.mem = memory_manager
         self.sample_rate = sample_rate
 
+        self.request_counter = 0
+
     async def monitor_loop(self) -> None:
 
         while True:
-            item = await self.completion_queue.get()
+            item = await self.sample_queue.get()
             #self.samples.append(item.payload)
             #self.current_model.add_sample(item.result, 0.0) # ignore latency for now
 
@@ -57,13 +57,18 @@ class CoreMonitor:
                 print("test")
 
             finally:
-                self.completion_queue.task_done()
+                self.sample_queue.task_done()
 
-    '''Methods used '''
-    async def notify_completion(self, payload: dict, result: dict) -> None:
-        await self.completion_queue.put(
+    '''Monitoring methods'''
+
+    async def sample_request(self, payload: dict, result: dict) -> None:
+        await self.sample_queue.put(
             CompletionItem(payload=payload, result=result)
         )
+
+    def should_sample_request(self) -> bool:
+        self.request_counter += 1
+        return self.request_counter % self.sample_rate == 0
 
 
 

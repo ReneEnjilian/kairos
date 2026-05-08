@@ -17,7 +17,7 @@ slo:
 
 
 monitoring:
-  sample_rate: 50
+  sample_rate: 10
   sample_size: 100
   monotonicity: true
   discard: 3
