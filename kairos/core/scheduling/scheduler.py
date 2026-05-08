@@ -5,6 +5,7 @@ from collections import deque
 from kairos.core.memory.memory_manager import MemoryManager
 from kairos.core.control.commands import ControlCommand
 from kairos.core.catalog.model_variants_catalog import ModelVariantsCatalog
+from kairos.core.catalog.model import Model
 from kairos.logger import init_logger
 
 logger = init_logger(__name__)
@@ -29,6 +30,7 @@ class CoreScheduler:
 
     async def scheduling_loop(self) -> None:
         await self.initiate_model_servers()
+        await self.set_active_model(self.catalog.get_baseline())
         while True:
             job = await self.job_queue.get()
 
@@ -79,6 +81,14 @@ class CoreScheduler:
                     model=base_model,
                 )
             )
+
+    async def set_active_model(self, model: Model) -> None:
+        await self.control_queue.put(
+            ControlCommand(
+                kind="SET_ACTIVE_MODEL",
+                model=model,
+            )
+        )
 
     '''Timestamps-related methods'''
 

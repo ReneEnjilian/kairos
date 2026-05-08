@@ -49,35 +49,14 @@ class CoreMonitor:
         self.memory_manager = memory_manager
 
     async def monitor_loop(self) -> None:
-        await self.set_active_model(self.catalog.get_baseline())
+
         while True:
             item = await self.completion_queue.get()
-            self.samples.append(item.payload)
-            self.current_model.add_sample(item.result, 0.0) # ignore latency for now
+            #self.samples.append(item.payload)
+            #self.current_model.add_sample(item.result, 0.0) # ignore latency for now
 
             try:
-                self.completion_count += 1
-
-                # Minimal prototype behavior:
-                # if pause_after is set, pause dispatch once after N completions.
-                if (
-                    self.pause_after is not None
-                    and self.completion_count >= self.pause_after
-                ):
-                    logger.info(
-                        f"Monitor requests dispatch pause after "
-                        f"{self.completion_count} completions."
-                    )
-                    await self.pause_dispatch(
-                        reason=f"pause_after={self.pause_after}"
-                    )
-                    self.internal_work()
-                    self.pause_after = None
-                    self.completion_count = 0
-
-                    await self.resume_dispatch(
-                        reason="because"
-                    )
+                print("test")
 
             finally:
                 self.completion_queue.task_done()
@@ -88,27 +67,6 @@ class CoreMonitor:
             CompletionItem(payload=payload, result=result)
         )
 
-    async def pause_dispatch(self, reason: str = "monitor request") -> None:
-        await self.control_queue.put(
-            ControlCommand(kind="PAUSE_DISPATCH")
-        )
-
-    async def resume_dispatch(self, reason: str = "monitor request") -> None:
-        await self.control_queue.put(
-            ControlCommand(kind="RESUME_DISPATCH")
-        )
-
-    def internal_work(self) -> None:
-        for i in range(5):
-            print(f"internal op: {i}")
 
 
-
-    async def set_active_model(self, model: Model) -> None:
-        await self.control_queue.put(
-            ControlCommand(
-                kind="SET_ACTIVE_MODEL",
-                model=model,
-            )
-        )
 
