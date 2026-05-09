@@ -1,17 +1,10 @@
-from typing import List
 from dataclasses import dataclass
-
-
-@dataclass(slots=True)
-class SampleItem:
-    result: str
-    latency: float
+from collections import OrderedDict
 
 
 class Model:
     def __init__(
             self,
-            name: str,
             port: int,
             relation: str,
             model_id: str,
@@ -25,10 +18,10 @@ class Model:
             activation_type: str = None,
             storage_location: str = None,
             gpu_factor: float = 2.0,
+            max_cached_results: int = 1000,
     ):
 
         # Specified in configuration file
-        self.name = name
         self.relation = relation
         self.port = port
         self.model_id = model_id
@@ -52,15 +45,14 @@ class Model:
         self.avg_latency: float = 0.0
         self.avg_accuracy: float = 0.0
         self.avg_energy_consumption: float = 0.0
-        self.sample_results: List[SampleItem] = []
+        self.max_cached_results = max_cached_results
+        self.results: OrderedDict[str, dict] = OrderedDict()
 
         # calculate memory requirement (estimate)
         self.gpu_factor = gpu_factor
         self.gpu_memory_allocation: float = self.size * self.gpu_factor
 
-
     def print_all_fields(self) -> None:
-        print(f"name: {self.name}")
         print(f"relation: {self.relation}")
         print(f"port: {self.port}")
         print(f"model_id: {self.model_id}")
@@ -75,11 +67,23 @@ class Model:
         print(f"storage_location: {self.storage_location}")
         print(f"gpu_factor: {self.gpu_factor}")
 
-    def add_sample(self, result: str, latency: float) -> None:
-        self.sample_results.append(SampleItem(result, latency))
-        #if len(self.sample_results) >= self.sample_limit:
-            # TODO: compute avg_latency, avg_accuracy
-            #pass
+    def add_result(self, sample_id: str, result: dict) -> None:
+        self.results[sample_id] = result
+        self.results.move_to_end(sample_id)
+
+        if len(self.results) > self.max_cached_results:
+            self.results.popitem(last=False)
+
+    def has_result(self, sample_id: str) -> bool:
+        return sample_id in self.results
+
+    def get_result(self, sample_id: str) -> dict | None:
+        result = self.results.get(sample_id)
+
+        if result is not None:
+            self.results.move_to_end(sample_id)
+
+        return result
 
     def set_storage_location_to_disk(self) -> None:
         self.storage_location = "disk"
@@ -91,7 +95,7 @@ class Model:
         self.storage_location = "gpu"
 
     def is_baseline(self) -> bool:
-        return self.relation == "baseline"
+        return self.relation == "base"
 
     def is_quantized(self) -> bool:
         return self.relation == "quantized"

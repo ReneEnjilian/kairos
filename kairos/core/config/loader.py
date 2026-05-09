@@ -11,11 +11,6 @@ def parse_models_from_config(config_path: Path, api_port: int) -> None:
         registration_data = yaml.safe_load(f)
     port_counter = 1
     for model in registration_data['models']:
-        if "name" in model.keys():
-            model_data['name'] = model['name']
-        else:
-            model_data['name'] = model['model_id']
-
         if "port" in model.keys():
             model_data['port'] = model['port']
         else:

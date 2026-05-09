@@ -19,11 +19,11 @@ class DockerContainer:
         self.docker_image = "vllm-openai:thesis-v0.13.0"
         self.timeout = 300  # time to wait in seconds
 
-    def start_container(self, model_name: str, model_id: str, port: int, gpu_memory_allocation: float) -> None:
+    def start_container(self, model_id: str, port: int, gpu_memory_allocation: float) -> None:
         gpu_memory_utilization = gpu_memory_allocation / 24000000000
         hf_cache = str(Path.home() / ".cache" / "huggingface")
         hf_token = __import__("os").environ.get("HF_TOKEN")
-        container_name = f"kairos-{model_name.lower().replace('/', '-')}"
+        container_name = f"kairos-{model_id.lower().replace('/', '-')}"
 
         self.client.containers.run(
             image=self.docker_image,
@@ -59,12 +59,12 @@ class DockerContainer:
                 break
 
             if time.monotonic() > deadline:
-                raise RuntimeError(f"Model server {model_name} did not become ready.")
+                raise RuntimeError(f"Model server {model_id} did not become ready.")
 
             time.sleep(3)  # every 3 seconds
 
-        self.running_containers[model_name] = container_name
-        logger.info(f"Docker container for model {model_name} started.")
+        self.running_containers[model_id] = container_name
+        logger.info(f"Docker container for model {model_id} started.")
 
     def is_running(self, port: int) -> bool:
         try:
@@ -73,19 +73,19 @@ class DockerContainer:
         except httpx.HTTPError:
             return False
 
-    def stop_container(self, model_name: str) -> None:
+    def stop_container(self, model_id: str) -> None:
         try:
-            container_name = self.running_containers[model_name]
+            container_name = self.running_containers[model_id]
             container = self.client.containers.get(container_name)
             container.stop()
-            self.running_containers.pop(model_name, None)
-            logger.info(f"Docker container for model {model_name} stopped.")
+            self.running_containers.pop(model_id, None)
+            logger.info(f"Docker container for model {model_id} stopped.")
         except NotFound:
             return
 
     def stop_all_containers(self) -> None:
-        for model_name in list(self.running_containers):
+        for model_id in list(self.running_containers):
             try:
-                self.stop_container(model_name)
+                self.stop_container(model_id)
             except APIError:
                 pass

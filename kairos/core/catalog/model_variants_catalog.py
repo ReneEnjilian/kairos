@@ -19,10 +19,10 @@ class ModelVariantsCatalog:
         self.__class__._initialized = True
 
     def add_model(self, model: Model) -> None:
-        self.catalog[model.name] = model
+        self.catalog[model.model_id] = model
 
-    def get_model(self, name: str) -> Model:
-        return self.catalog.get(name)
+    def get_model(self, model_id: str) -> Model:
+        return self.catalog.get(model_id)
 
     def get_baseline(self) -> Model:
         for model in self.catalog.values():

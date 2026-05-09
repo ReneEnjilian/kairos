@@ -4,7 +4,7 @@ client:
   endpoint: /infer
   keep_logs: true
   max_in_flight: 128
-  max_requests: 50
+  max_requests: 70
   random_seed: 42
 
 workload_pattern:

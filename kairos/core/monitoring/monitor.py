@@ -17,7 +17,6 @@ logger = init_logger(__name__)
 class SampleItem:
     payload: dict
     result: dict
-    #model: Model
 
 
 class CoreMonitor:
@@ -70,6 +69,12 @@ class CoreMonitor:
         self.request_counter += 1
         return self.request_counter % self.sample_rate == 0
 
-
+    '''
+    missing_samples = [
+    sample
+    for sample in evaluation_snapshot
+    if not model.has_result(sample.sample_id)
+    ]
+    '''
 
 

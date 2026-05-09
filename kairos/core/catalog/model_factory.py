@@ -6,7 +6,7 @@ logger = init_logger(__name__)
 
 
 def build_model_from_config(model_data: dict) -> None:
-    logger.info(f"Adding model {model_data['name']} to Catalog.")
+    logger.info(f"Adding model {model_data['model_id']} to Catalog.")
     model = Model(**model_data)
     catalog = ModelVariantsCatalog()
     catalog.add_model(model)

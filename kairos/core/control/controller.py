@@ -283,10 +283,9 @@ class CoreController:
     '''
 
     async def start_model_server(self, model: Model) -> None:
-        logger.info(f"Starting model {model.name}.")
+        logger.info(f"Starting model {model.model_id}.")
         await asyncio.to_thread(
             self.docker.start_container,
-            model.name,
             model.model_id,
             model.port,
             model.gpu_memory_allocation
@@ -303,10 +302,10 @@ class CoreController:
             model.set_storage_location_to_disk()
 
     async def stop_model_server(self, model: Model) -> None:
-        logger.info(f"Stopping model {model.name}.")
+        logger.info(f"Stopping model {model.model_id}.")
         await asyncio.to_thread(
             self.docker.stop_container,
-            model.name,
+            model.model_id,
         )
         model.set_storage_location_to_disk()
 
@@ -317,22 +316,22 @@ class CoreController:
     async def sleep_level_1(self, model: Model) -> None:
         await self.vllm_client.sleep_level_1(model.port)
         model.set_storage_location_to_cpu()
-        logger.info(f"Sleeping {model.name} on CPU")
+        logger.info(f"Sleeping {model.model_id} on CPU")
 
     async def sleep_level_2(self, model: Model) -> None:
         await self.vllm_client.sleep_level_2(model.port)
         model.set_storage_location_to_disk()
-        logger.info(f"Sleeping {model.name} on disk")
+        logger.info(f"Sleeping {model.model_id} on disk")
 
     async def wake_up_from_cpu(self, model: Model) -> None:
         await self.vllm_client.wake_up(model.port)
         model.set_storage_location_to_gpu()
-        logger.info(f"waking {model.name} from CPU RAM.")
+        logger.info(f"waking {model.model_id} from CPU RAM.")
 
     async def wake_up_from_cpu_persistent(self, model: Model) -> None:
         await self.vllm_client.wake_up_persistent(model.port)
         model.set_storage_location_to_gpu()
-        logger.info(f"waking {model.name} from CPU RAM while keeping weight in RAM.")
+        logger.info(f"waking {model.model_id} from CPU RAM while keeping weight in RAM.")
 
     async def wake_up_from_disk(self, model: Model) -> None:
         port = model.port
@@ -340,12 +339,12 @@ class CoreController:
         await self.vllm_client.reload_weights(port)
         await self.vllm_client.reset_prefix_cache(port)
         model.set_storage_location_to_gpu()
-        logger.info(f"Waking {model.name} from disk.")
+        logger.info(f"Waking {model.model_id} from disk.")
 
     async def prefetch_weights(self, model: Model) -> None:
         await self.vllm_client.prefetch(model.port)
         model.set_storage_location_to_cpu()
-        logger.info(f"Prefetching {model.name} weights into CPU RAM.")
+        logger.info(f"Prefetching {model.model_id} weights into CPU RAM.")
 
     async def wake_up_from_prefetch(self, model: Model) -> None:
         port = model.port
@@ -353,4 +352,4 @@ class CoreController:
         await self.vllm_client.reload_weights_from_prefetch(port)
         await self.vllm_client.reset_prefix_cache(port)
         model.set_storage_location_to_gpu()
-        logger.info(f"Waking {model.name} from prefetch.")
+        logger.info(f"Waking {model.model_id} from prefetch.")
