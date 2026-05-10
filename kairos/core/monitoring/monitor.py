@@ -3,7 +3,8 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 from typing import List
-from collections import deque
+from collections import OrderedDict
+from uuid import uuid4
 
 from kairos.core.catalog.model import Model
 from kairos.core.memory.memory_manager import MemoryManager
@@ -45,7 +46,7 @@ class CoreMonitor:
         self.sample_rate = sample_rate
 
         self.request_counter = 0
-        self.samples: deque[dict] = deque(maxlen=self.sample_size)
+        self.samples: OrderedDict[str, dict] = OrderedDict()
 
     async def monitor_loop(self) -> None:
 
@@ -53,7 +54,18 @@ class CoreMonitor:
             item = await self.sample_queue.get()
 
             try:
-                self.samples.append(item.payload)
+                sample_id = f"sample-{uuid4()}"
+                payload = dict(item.payload)
+
+                self.samples[sample_id] = payload
+                self.samples.move_to_end(sample_id)
+
+                if len(self.samples) > self.sample_size:
+                    self.samples.popitem(last=False)
+
+                active_model = item.result["active_model"]
+                model = self.catalog.get_model(active_model)
+                model.add_result(sample_id, item.result)
 
             finally:
                 self.sample_queue.task_done()

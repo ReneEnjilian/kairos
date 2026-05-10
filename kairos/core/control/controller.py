@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
+from typing import Any
 
 from kairos.core.control.commands import ControlCommand
 from kairos.core.monitoring.monitor import CoreMonitor
@@ -48,7 +49,7 @@ class CoreController:
         self.vllm_client = VLLMClient()
 
         # For continuous batching
-        self.max_in_flight = 64
+        self.max_in_flight = 256
         self.inflight_semaphore = asyncio.Semaphore(self.max_in_flight)
         self._inflight_tasks: set[asyncio.Task[None]] = set()
 
@@ -239,7 +240,7 @@ class CoreController:
                 self.control_queue.task_done()
 
     '''
-    Methods for dispatcher:
+    Methods for inference:
     '''
 
     '''
@@ -278,8 +279,75 @@ class CoreController:
 
         return result
 
+    async def evaluate_sample_on_model(
+            self,
+            model: Model,
+            sample: dict[str, Any],
+    ) -> dict[str, Any]:
+        completion = await self.vllm_client.chat_completion(
+            port=model.port,
+            model_id=model.model_id,
+            instruction=sample["instruction"],
+            prompt=sample["prompt"],
+        )
+
+        result = dict(sample)
+
+        result["kairos"] = completion.text
+        result["correct"] = (
+                self._normalize_answer(result["answer"])
+                == self._normalize_answer(completion.text)
+        )
+        result["infer_latency_ms"] = completion.latency_ms
+        result["active_model"] = model.model_id
+
+        return result
+
+    async def evaluate_model_on_samples(
+            self,
+            model: Model,
+            samples: list[dict[str, Any]],
+            max_in_flight: int,
+    ) -> list[dict[str, Any]]:
+        semaphore = asyncio.Semaphore(max_in_flight)
+
+        async def run_one(sample: dict[str, Any]) -> dict[str, Any]:
+            async with semaphore:
+                return await self.evaluate_sample_on_model(
+                    model=model,
+                    sample=sample,
+                )
+
+        results = await asyncio.gather(
+            *(run_one(sample) for sample in samples)
+        )
+
+        return list(results)
+
+    async def evaluate_models_on_same_samples(
+            self,
+            models: list[Model],
+            samples: list[dict[str, Any]],
+            max_in_flight_per_model: int,
+    ) -> dict[str, list[dict[str, Any]]]:
+        results = await asyncio.gather(
+            *(
+                self.evaluate_model_on_samples(
+                    model=model,
+                    samples=samples,
+                    max_in_flight=max_in_flight_per_model,
+                )
+                for model in models
+            )
+        )
+
+        return {
+            model.model_id: model_results
+            for model, model_results in zip(models, results)
+        }
+
     '''
-    Methods for controller:
+    Methods for model placement:
     '''
 
     async def start_model_server(self, model: Model) -> None:

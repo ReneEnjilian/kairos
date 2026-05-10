@@ -42,7 +42,7 @@ class Model:
 
         # TODO: SLOs and how to describe them (avg vs full data)
         # TODO: includes latency, energy, accuracy
-        self.avg_latency: float = 0.0
+        self.median_latency: float = 0.0
         self.avg_accuracy: float = 0.0
         self.avg_energy_consumption: float = 0.0
         self.max_cached_results = max_cached_results
@@ -67,9 +67,17 @@ class Model:
         print(f"storage_location: {self.storage_location}")
         print(f"gpu_factor: {self.gpu_factor}")
 
+    '''
     def add_result(self, sample_id: str, result: dict) -> None:
         self.results[sample_id] = result
         self.results.move_to_end(sample_id)
+
+        if len(self.results) > self.max_cached_results:
+            self.results.popitem(last=False)
+    '''
+
+    def add_result(self, sample_id: str, result: dict) -> None:
+        self.results[sample_id] = result
 
         if len(self.results) > self.max_cached_results:
             self.results.popitem(last=False)
@@ -78,12 +86,7 @@ class Model:
         return sample_id in self.results
 
     def get_result(self, sample_id: str) -> dict | None:
-        result = self.results.get(sample_id)
-
-        if result is not None:
-            self.results.move_to_end(sample_id)
-
-        return result
+        return self.results.get(sample_id)
 
     def set_storage_location_to_disk(self) -> None:
         self.storage_location = "disk"

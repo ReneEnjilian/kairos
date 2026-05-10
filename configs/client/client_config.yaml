@@ -3,8 +3,8 @@ client:
   kairos_port: 8000
   endpoint: /infer
   keep_logs: true
-  max_in_flight: 128
-  max_requests: 70
+  max_in_flight: 256
+  max_requests: 200
   random_seed: 42
 
 workload_pattern:
