@@ -39,6 +39,8 @@ class CoreMonitor:
         recycle: bool = False,
         sample_size: int = 100,
         sample_rate: int = 50,
+        weight_accuracy: float = 0.5,
+        weight_latency: float = 0.5,
     ) -> None:
 
         self.monitoring_queue: asyncio.Queue[MonitorEvent] = asyncio.Queue()
@@ -46,6 +48,8 @@ class CoreMonitor:
 
         self.accuracy = accuracy
         self.latency = latency
+        self.weight_accuracy = weight_accuracy
+        self.weight_latency = weight_latency
         self.monotonicity = monotonicity
         self.discard = discard
         self.recycle = recycle

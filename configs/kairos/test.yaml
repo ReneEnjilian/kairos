@@ -11,8 +11,10 @@ models:
   #  gpu_factor: 1.3
 
 slo:
-  accuracy: 0.9
-  latency: 200.8
+  accuracy: 0.95
+  latency: 200
+  weight_acc: 0.7
+  weight_lat: 0.3
 
 
 monitoring:

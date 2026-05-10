@@ -44,8 +44,10 @@ def parse_objectives_from_config(config_path: Path):
         accuracy = service_level_objectives["accuracy"]
     if "latency" in service_level_objectives.keys():
         latency = service_level_objectives["latency"]
+    weight_accuracy = service_level_objectives.get("weight_acc")
+    weight_latency = service_level_objectives.get("weight_lat")
 
-    return accuracy, latency
+    return accuracy, latency, weight_accuracy, latency_accuracy
 
 
 def parse_monitoring_from_config(config_path: Path) -> dict:

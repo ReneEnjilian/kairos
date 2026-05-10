@@ -27,7 +27,7 @@ async def async_main() -> None:
     ipc_server = CoreIpcServer()
 
     control_queue: asyncio.Queue[ControlCommand] = asyncio.Queue()
-    accuracy, latency = parse_objectives_from_config(config_path)
+    accuracy, latency, weight_accuracy, weight_latency = parse_objectives_from_config(config_path)
     monitoring = parse_monitoring_from_config(config_path)
 
     memory_manager = MemoryManager()
@@ -35,6 +35,8 @@ async def async_main() -> None:
         memory_manager=memory_manager,
         accuracy=accuracy,
         latency=latency,
+        weight_accuracy=weight_accuracy,
+        weight_latency=weight_l,
         **monitoring,
     )
 
