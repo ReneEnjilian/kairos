@@ -347,6 +347,21 @@ class CoreController:
         }
 
     '''
+    later usage: next to active model, and multiple evaluating at once
+    results = await self.evaluate_models_on_same_samples(
+    models=[candidate_model],
+    samples=samples,
+    max_in_flight_per_model=4,
+    )
+    
+    results = await self.evaluate_models_on_same_samples(
+    models=[model_a, model_b],
+    samples=samples,
+    max_in_flight_per_model=8,
+    )
+    '''
+
+    '''
     Methods for model placement:
     '''
 
