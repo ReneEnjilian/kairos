@@ -32,8 +32,8 @@ class CoreMonitor:
     def __init__(
         self,
         memory_manager: MemoryManager,
-        accuracy: float | None = None,
-        latency: float | None = None,
+        accuracy_slo: float | None = None,
+        latency_slo: float | None = None,
         monotonicity: bool = False,
         discard: bool = False,
         recycle: bool = False,
@@ -46,8 +46,8 @@ class CoreMonitor:
         self.monitoring_queue: asyncio.Queue[MonitorEvent] = asyncio.Queue()
         self.catalog = ModelVariantsCatalog()
 
-        self.accuracy = accuracy
-        self.latency = latency
+        self.accuracy_slo = accuracy_slo
+        self.latency_slo = latency_slo
         self.weight_accuracy = weight_accuracy
         self.weight_latency = weight_latency
         self.monotonicity = monotonicity
