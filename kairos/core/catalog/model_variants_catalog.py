@@ -24,7 +24,7 @@ class ModelVariantsCatalog:
     def get_model(self, model_id: str) -> Model:
         return self.catalog.get(model_id)
 
-    def get_baseline(self) -> Model:
+    def get_base(self) -> Model:
         for model in self.catalog.values():
             if model.relation == "base":
                 return model

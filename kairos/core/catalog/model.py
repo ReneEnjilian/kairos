@@ -40,13 +40,14 @@ class Model:
 
         self.storage_location = storage_location  # options: disk, cpu, gpu
 
-        # TODO: SLOs and how to describe them (avg vs full data)
         # TODO: includes latency, energy, accuracy
-        self.median_latency: float = 0.0
-        self.avg_accuracy: float = 0.0
-        self.avg_energy_consumption: float = 0.0
+        self.latency: float = 0.0
+        self.accuracy: float = 1.0 if self.is_base() else 0.0
+        # self.avg_energy_consumption: float = 0.0
         self.max_cached_results = max_cached_results
-        self.results: OrderedDict[str, dict] = OrderedDict()
+        self.evaluation_results: list[dict] = []
+        self.failed_rounds: int = 0
+        self.discarded: bool = False
 
         # calculate memory requirement (estimate)
         self.gpu_factor = gpu_factor
@@ -76,17 +77,32 @@ class Model:
             self.results.popitem(last=False)
     '''
 
-    def add_result(self, sample_id: str, result: dict) -> None:
-        self.results[sample_id] = result
+    def set_evaluation_results(self, results: list[dict]) -> None:
+        self.evaluation_results = list(results)
 
-        if len(self.results) > self.max_cached_results:
-            self.results.popitem(last=False)
+    def update_failed_rounds(self, failed: bool, threshold: int) -> None:
+        if failed:
+            self.failed_rounds += 1
+        else:
+            self.failed_rounds = 0
 
-    def has_result(self, sample_id: str) -> bool:
-        return sample_id in self.results
+        if not self.is_base() and self.failed_rounds >= threshold:
+            self.discarded = True
 
-    def get_result(self, sample_id: str) -> dict | None:
-        return self.results.get(sample_id)
+    def get_evaluation_results(self):
+        return self.evaluation_results
+
+    def set_accuracy(self, accuracy: float) -> None:
+        self.accuracy = accuracy
+
+    def get_accuracy(self) -> float:
+        return self.accuracy
+
+    def set_latency(self, latency: float) -> None:
+        self.latency = latency
+
+    def get_latency(self) -> float:
+        return self.latency
 
     def set_storage_location_to_disk(self) -> None:
         self.storage_location = "disk"
@@ -97,7 +113,7 @@ class Model:
     def set_storage_location_to_gpu(self) -> None:
         self.storage_location = "gpu"
 
-    def is_baseline(self) -> bool:
+    def is_base(self) -> bool:
         return self.relation == "base"
 
     def is_quantized(self) -> bool:

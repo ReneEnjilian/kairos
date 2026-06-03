@@ -192,13 +192,13 @@ class CoreController:
                     await self.stop_model_server(command.model)
 
                 if command.kind == "L1_SLEEP":
-                    if command.model.is_baseline() and self.dispatch_enabled.is_set():
+                    if command.model.is_base() and self.dispatch_enabled.is_set():
                         self.dispatch_enabled.clear()
                     await self.sleep_level_1(command.model)
                     self.dispatch_enabled.set()
 
                 if command.kind == "L2_SLEEP":
-                    if command.model.is_baseline() and self.dispatch_enabled.is_set():
+                    if command.model.is_base() and self.dispatch_enabled.is_set():
                         self.dispatch_enabled.clear()
                     await self.sleep_level_2(command.model)
                     self.dispatch_enabled.set()
