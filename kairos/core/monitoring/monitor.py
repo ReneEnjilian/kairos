@@ -91,6 +91,8 @@ class CoreMonitor:
                             model.set_evaluation_results(self.first_round_results)
                             self.completed_evaluation_models.add(active_model)
 
+                            # call reconfiguration
+
                 elif isinstance(item, EvaluationItem):
                     for model_id, results in item.evaluation.items():
                         model = self.catalog.get_model(model_id)
@@ -117,7 +119,7 @@ class CoreMonitor:
                         }
 
                         self.monitoring_round += 1
-
+                        self.evaluation_snapshot = list(self.samples)
                         # call reconfiguration
                 else:
                     raise TypeError(f"Unknown monitoring item: {type(item)}")
