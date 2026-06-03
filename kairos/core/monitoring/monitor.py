@@ -6,9 +6,7 @@ import math
 from dataclasses import dataclass
 from typing import TypeAlias, Any
 from collections import deque
-from uuid import uuid4
-
-from kairos.core.catalog.model import Model
+#from kairos.core.catalog.model import Model
 from kairos.core.memory.memory_manager import MemoryManager
 from kairos.logger import init_logger
 from kairos.core.catalog.model_variants_catalog import ModelVariantsCatalog
