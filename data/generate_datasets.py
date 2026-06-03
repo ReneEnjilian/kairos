@@ -59,7 +59,7 @@ def format_option_labelset(labels: list) -> str:
 def preprocess_openbookqa():
     OPENBOOKQA_DIR.mkdir(parents=True, exist_ok=True)
     output_path = OPENBOOKQA_DIR / "openbookqa.jsonl"
-    ds = load_dataset("allenai/openbookqa", name="main", split="test")
+    ds = load_dataset("allenai/openbookqa", name="main", split="validation")
 
     with output_path.open("w", encoding="utf-8") as f:
         for example in ds:
@@ -95,7 +95,7 @@ def preprocess_openbookqa():
 def preprocess_mmlu():
     MMLU_DIR.mkdir(parents=True, exist_ok=True)
     output_path = MMLU_DIR / "mmlu.jsonl"
-    ds = load_dataset("cais/mmlu", name="all", split="test")
+    ds = load_dataset("cais/mmlu", name="all", split="validation")
 
     with output_path.open("w", encoding="utf-8") as f:
         for example in ds:
@@ -133,7 +133,7 @@ def preprocess_logiqa():
     output_path = LOGIQA_DIR / "logiqa.jsonl"
 
     ds = load_dataset("lucasmccabe/logiqa", revision="refs/convert/parquet")
-    ds = ds["test"]
+    ds = ds["validation"]
 
     with output_path.open("w", encoding="utf-8") as f:
         for example in ds:

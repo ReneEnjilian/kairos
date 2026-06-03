@@ -4,10 +4,14 @@ models:
     port: 8001
     gpu_factor: 1.3
 
-  #- name: B
+  #- model_id: RedHatAI/Llama-3.2-3B-Instruct-quantized.w8a8
   #  relation: quantized
   #  port: 8002
-  #  model_id: RedHatAI/Llama-3.2-3B-Instruct-quantized.w8a8
+  #  gpu_factor: 1.3
+
+  #- model_id: Qwen/Qwen3-1.7B
+  #  relation: independent
+  #  port: 8003
   #  gpu_factor: 1.3
 
 slo:

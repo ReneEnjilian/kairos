@@ -105,7 +105,7 @@ class VLLMClient:
         model_id: str,
         instruction: str,
         prompt: str,
-        max_tokens: int = 4,
+        max_tokens: int = 1,
         temperature: float = 0.0,
         timeout: float = 30.0,
     ) -> VLLMCompletionResult:

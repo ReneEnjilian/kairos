@@ -47,7 +47,7 @@ def parse_objectives_from_config(config_path: Path):
     weight_accuracy = service_level_objectives.get("weight_acc")
     weight_latency = service_level_objectives.get("weight_lat")
 
-    return accuracy, latency, weight_accuracy, latency_accuracy
+    return accuracy, latency, weight_accuracy, weight_latency
 
 
 def parse_monitoring_from_config(config_path: Path) -> dict:

@@ -17,7 +17,7 @@ class DockerContainer:
         self.client = docker.from_env()
         self.running_containers: Dict[str, str] = {}
         self.docker_image = "vllm-openai:thesis-v0.13.0"
-        self.timeout = 300  # time to wait in seconds
+        self.timeout = 700  # time to wait in seconds
 
     def start_container(self, model_id: str, port: int, gpu_memory_allocation: float) -> None:
         gpu_memory_utilization = gpu_memory_allocation / 24000000000

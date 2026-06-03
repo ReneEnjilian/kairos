@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -96,14 +97,19 @@ class CoreController:
 
     '''
     async def dispatch_loop(self) -> None:
+        print("DISPATCH LOOP STARTED", id(asyncio.current_task()))
+
         while True:
-            print("dispatch")
             request = await self.request_queue.get()
 
             try:
                 await self.dispatch_enabled.wait()
 
+                #print("START", request.request_id)
+
                 result = await self.handle_infer(request.payload)
+
+                #print("END", request.request_id)
 
                 reply = {
                     "kind": "infer_result",
@@ -113,11 +119,6 @@ class CoreController:
                 }
                 await self.ipc_server.send_reply(request.identity, reply)
 
-                if self.monitor is not None:
-                    await self.monitor.notify_completion(
-                        payload=request.payload,
-                        result=result,
-                    )
 
             except Exception as e:
                 reply = {
@@ -131,7 +132,6 @@ class CoreController:
             finally:
                 self.request_queue.task_done()
     '''
-
     async def dispatch_loop(self) -> None:
         while True:
             request = await self.request_queue.get()
@@ -144,7 +144,7 @@ class CoreController:
             )
             self._inflight_tasks.add(task)
             task.add_done_callback(self._inflight_tasks.discard)
-
+    
     async def _process_request(self, request: RequestItem) -> None:
         try:
             result = await self.handle_infer(request.payload)
@@ -257,8 +257,16 @@ class CoreController:
         return result
     '''
 
+
     def _normalize_answer(self, answer: str) -> str:
-        return answer.strip().lower()
+        text = answer.strip().lower()
+
+        match = re.match(r"(yes|no|[0-3]|[a-d])\b", text)
+
+        if match is None:
+            return text
+
+        return match.group(0)
 
     async def handle_infer(self, payload: dict) -> dict:
         active_model = self.active_model

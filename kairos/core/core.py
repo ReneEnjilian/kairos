@@ -33,10 +33,10 @@ async def async_main() -> None:
     memory_manager = MemoryManager()
     monitor = CoreMonitor(
         memory_manager=memory_manager,
-        accuracy=accuracy,
-        latency=latency,
+        accuracy_slo=accuracy,
+        latency_slo=latency,
         weight_accuracy=weight_accuracy,
-        weight_latency=weight_l,
+        weight_latency=weight_latency,
         **monitoring,
     )
 
