@@ -20,13 +20,12 @@ slo:
   weight_acc: 0.7
   weight_lat: 0.3
 
-
 monitoring:
   sample_rate: 10
   sample_size: 50
-  monotonicity: true
-  discard: 3
-  recycle: 3
+  monotonicity: false
+  discard: 2
+  recycle: 0
 
 scheduler:
   method: holt

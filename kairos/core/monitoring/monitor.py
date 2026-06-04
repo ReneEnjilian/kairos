@@ -10,6 +10,7 @@ from collections import deque
 from kairos.core.memory.memory_manager import MemoryManager
 from kairos.logger import init_logger
 from kairos.core.catalog.model_variants_catalog import ModelVariantsCatalog
+from kairos.core.reconfiguration.reconfiguration import CoreReconfiguration
 
 logger = init_logger(__name__)
 
@@ -32,6 +33,7 @@ class CoreMonitor:
     def __init__(
         self,
         memory_manager: MemoryManager,
+        reconfiguration: CoreReconfiguration,
         accuracy_slo: float | None = None,
         latency_slo: float | None = None,
         monotonicity: bool = False,
@@ -39,8 +41,8 @@ class CoreMonitor:
         recycle: int = 0,
         sample_size: int = 100,
         sample_rate: int = 50,
-        weight_accuracy: float = 0.5,
-        weight_latency: float = 0.5,
+        #weight_accuracy: float = 0.5,
+        #weight_latency: float = 0.5,
     ) -> None:
 
         self.monitoring_queue: asyncio.Queue[MonitorEvent] = asyncio.Queue()
@@ -48,8 +50,8 @@ class CoreMonitor:
 
         self.accuracy_slo = accuracy_slo
         self.latency_slo = latency_slo
-        self.weight_accuracy = weight_accuracy
-        self.weight_latency = weight_latency
+        #self.weight_accuracy = weight_accuracy
+        #self.weight_latency = weight_latency
         self.monotonicity = monotonicity
         self.discard = discard
         self.recycle = recycle
@@ -64,6 +66,7 @@ class CoreMonitor:
         self.expected_evaluation_models: set[str] = set()
         self.completed_evaluation_models: set[str] = set()
         self.evaluation_snapshot: list[dict] = []
+        self.reconfiguration = reconfiguration
 
     async def monitor_loop(self) -> None:
         models = self.catalog.get_catalog()
@@ -90,6 +93,10 @@ class CoreMonitor:
                             self.completed_evaluation_models.add(active_model)
 
                             # call reconfiguration
+                            self.reconfiguration.trigger_reconfiguration(
+                                list(self.evaluation_snapshot),
+                                self.monitoring_round
+                            )
 
                 elif isinstance(item, EvaluationItem):
                     for model_id, results in item.evaluation.items():
@@ -119,6 +126,10 @@ class CoreMonitor:
                         self.monitoring_round += 1
                         self.evaluation_snapshot = list(self.samples)
                         # call reconfiguration
+                        self.reconfiguration.trigger_reconfiguration(
+                            list(self.evaluation_snapshot),
+                            self.monitoring_round
+                        )
                 else:
                     raise TypeError(f"Unknown monitoring item: {type(item)}")
             finally:

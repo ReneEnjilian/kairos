@@ -11,6 +11,7 @@ from kairos.core.config.loader import (
 from kairos.core.control.commands import ControlCommand
 from kairos.core.control.controller import CoreController
 from kairos.core.monitoring.monitor import CoreMonitor
+from kairos.core.reconfiguration.reconfiguration import CoreReconfiguration
 from kairos.core.scheduling.scheduler import CoreScheduler
 from kairos.ipc.server import CoreIpcServer
 from kairos.logger import init_logger
@@ -31,12 +32,20 @@ async def async_main() -> None:
     monitoring = parse_monitoring_from_config(config_path)
 
     memory_manager = MemoryManager()
-    monitor = CoreMonitor(
+
+    reconfiguration = CoreReconfiguration(
         memory_manager=memory_manager,
-        accuracy_slo=accuracy,
-        latency_slo=latency,
         weight_accuracy=weight_accuracy,
         weight_latency=weight_latency,
+    )
+
+    monitor = CoreMonitor(
+        memory_manager=memory_manager,
+        reconfiguration=reconfiguration,
+        accuracy_slo=accuracy,
+        latency_slo=latency,
+        #weight_accuracy=weight_accuracy,
+        #weight_latency=weight_latency,
         **monitoring,
     )
 
