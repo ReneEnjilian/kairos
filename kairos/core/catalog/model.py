@@ -67,6 +67,10 @@ class Model:
         print(f"activation_type: {self.activation_type}")
         print(f"storage_location: {self.storage_location}")
         print(f"gpu_factor: {self.gpu_factor}")
+        print(f"gpu_memory_allocation: {self.gpu_memory_allocation}")
+        print(f"latency: {self.latency}")
+        print(f"accuracy: {self.accuracy}")
+
 
     '''
     def add_result(self, sample_id: str, result: dict) -> None:

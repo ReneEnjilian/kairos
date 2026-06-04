@@ -29,8 +29,8 @@ class CoreScheduler:
         self.catalog = ModelVariantsCatalog()
 
     async def scheduling_loop(self) -> None:
-        await self.initiate_model_servers()
-        await self.set_active_model(self.catalog.get_base())
+        #await self.initiate_model_servers()
+        #await self.set_active_model(self.catalog.get_base())
         while True:
             job = await self.job_queue.get()
 
