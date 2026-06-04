@@ -117,6 +117,9 @@ class Model:
     def set_storage_location_to_gpu(self) -> None:
         self.storage_location = "gpu"
 
+    def get_storage_location(self) -> str:
+        return self.storage_location
+
     def is_base(self) -> bool:
         return self.relation == "base"
 
