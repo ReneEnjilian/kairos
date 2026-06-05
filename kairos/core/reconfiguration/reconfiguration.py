@@ -79,6 +79,16 @@ class CoreReconfiguration:
             reverse=True,
         )
         '''
+    def get_current_placement(self) -> dict:
+        current_placement = dict()
+        current_placement["disk"] = []
+        current_placement["cpu"] = []
+        current_placement["gpu"] = []
+
+        for model in self.models.values():
+            placement = model.get_storage_location()
+            current_placement[placement].append(model)
+        return current_placement
 
     def reconfiguration_algorithm(self):
         # get models we want to reconfigure

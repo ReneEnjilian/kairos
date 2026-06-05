@@ -1,14 +1,23 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass
 from collections import deque
 from kairos.core.memory.memory_manager import MemoryManager
-from kairos.core.control.commands import ControlCommand
+from kairos.core.control.commands import ControlCommand, ControlKind
 from kairos.core.catalog.model_variants_catalog import ModelVariantsCatalog
 from kairos.core.catalog.model import Model
 from kairos.logger import init_logger
 
 logger = init_logger(__name__)
+
+
+@dataclass(slots=True)
+class ScheduleCommand:
+    kind: ControlKind
+    model: list[Model]
+    interference: bool
+    samples: list[dict] | None = None
 
 
 class CoreScheduler:
@@ -24,7 +33,7 @@ class CoreScheduler:
         self.mem = memory_manager
         self.control_queue = control_queue
 
-        self.job_queue: asyncio.Queue = asyncio.Queue()
+        self.job_queue: asyncio.Queue[ScheduleCommand] = asyncio.Queue()
         self.arrival_timestamps: deque[float] = deque(maxlen=1000)
         self.catalog = ModelVariantsCatalog()
 

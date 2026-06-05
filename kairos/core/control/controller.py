@@ -185,38 +185,32 @@ class CoreController:
                 if command.kind == "START_MODEL_SERVER":
                     if self.dispatch_enabled.is_set():
                         self.dispatch_enabled.clear()
-                    await self.start_model_server(command.model)
+                    await self.start_model_server(command.model[0])
                     self.dispatch_enabled.set()
 
                 if command.kind == "STOP_MODEL_SERVER":
-                    await self.stop_model_server(command.model)
+                    await self.stop_model_server(command.model[0])
 
                 if command.kind == "L1_SLEEP":
-                    if command.model.is_base() and self.dispatch_enabled.is_set():
-                        self.dispatch_enabled.clear()
-                    await self.sleep_level_1(command.model)
-                    self.dispatch_enabled.set()
+                    await self.sleep_level_1(command.model[0])
 
                 if command.kind == "L2_SLEEP":
-                    if command.model.is_base() and self.dispatch_enabled.is_set():
-                        self.dispatch_enabled.clear()
-                    await self.sleep_level_2(command.model)
-                    self.dispatch_enabled.set()
+                    await self.sleep_level_2(command.model[0])
 
                 if command.kind == "WAKE_UP_FROM_CPU":
-                    await self.wake_up_from_cpu(command.model)
+                    await self.wake_up_from_cpu(command.model[0])
 
                 if command.kind == "WAKE_UP_PERSISTENT":
-                    await self.wake_up_from_cpu(command.model)
+                    await self.wake_up_from_cpu(command.model[0])
 
                 if command.kind == "WAKE_UP_FROM_DISK":
-                    await self.wake_up_from_disk(command.model)
+                    await self.wake_up_from_disk(command.model[0])
 
                 if command.kind == "PREFETCH":
-                    await self.prefetch_weights(command.model)
+                    await self.prefetch_weights(command.model[0])
 
                 if command.kind == "WAKE_UP_FROM_PREFETCH":
-                    await self.wake_up_from_prefetch(command.model)
+                    await self.wake_up_from_prefetch(command.model[0])
 
                 if command.kind == "PAUSE_DISPATCH":
                     if self.dispatch_enabled.is_set():
@@ -235,6 +229,9 @@ class CoreController:
                 if command.kind == "SET_ACTIVE_MODEL":
                     # TODO: Think about requests not returned yet
                     self.active_model = command.model
+
+                if command.kind == "EVALUATE_MODEL":
+                    pass
 
             finally:
                 self.control_queue.task_done()

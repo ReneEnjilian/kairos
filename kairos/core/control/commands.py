@@ -17,11 +17,12 @@ ControlKind = Literal[
     "WAKE_UP_PERSISTENT",
     "WAKE_UP_FROM_PREFETCH",
     "PREFETCH",
+    "EVALUATE_MODEL",
 ]
 
 
 @dataclass(slots=True)
 class ControlCommand:
     kind: ControlKind
-    model: Model
-    samples: list[str] | None = None
+    model: list[Model]
+    samples: list[dict] | None = None
