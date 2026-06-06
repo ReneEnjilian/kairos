@@ -41,6 +41,16 @@ class CoreReconfiguration:
         self.monitoring_round = monitoring_round
         self.reconfiguration_algorithm()
 
+    def reconfiguration_algorithm(self):
+        # get models we want to reconfigure
+        self.models = self.get_reconfigurable_models()
+
+        # TODO: if model is discarded and not on disk -> add to command sequence to get sent to disk (this step should come here)
+        self.discard_models_to_disk()
+
+        # compute model scores for feasible and infeasible models
+        self.compute_model_scores()
+
     def get_reconfigurable_models(self) -> dict[str, Model]:
         return {
             model_id: model
@@ -90,14 +100,17 @@ class CoreReconfiguration:
             current_placement[placement].append(model)
         return current_placement
 
-    def reconfiguration_algorithm(self):
-        # get models we want to reconfigure
-        self.models = self.get_reconfigurable_models()
+    def discard_models_to_disk(self) -> None:
+        all_models = self.catalog.get_catalog().values()
+        for model in all_models:
+            if model.discarded:
+                location = model.get_storage_location()
+                if location=="cpu":
+                    ScheduleCommand(
+                        kind=""
+                    )
 
-        # TODO: if model is discarded and not on disk -> add to command sequence to get sent to disk (this step should come here)
 
-        # compute model scores for feasible and infeasible models
-        self.compute_model_scores()
 
 
 
