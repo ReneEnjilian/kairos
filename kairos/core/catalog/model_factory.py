@@ -10,5 +10,4 @@ def build_model_from_config(model_data: dict) -> None:
     model = Model(**model_data)
     catalog = ModelVariantsCatalog()
     catalog.add_model(model)
-    model.print_all_fields()
 

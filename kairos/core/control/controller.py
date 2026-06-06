@@ -374,34 +374,31 @@ class CoreController:
 
     async def start_model_server(self, model: Model) -> None:
         logger.info(f"Starting model {model.model_id}.")
+
         vllm_engine_pid = await asyncio.to_thread(
             self.docker.start_container,
             model.model_id,
             model.port,
-            model.gpu_memory_allocation_estimate
+            model.gpu_memory_allocation_estimate,
         )
         model.set_engine_pid(vllm_engine_pid)
 
-        # get the memory usage in GPU during sleep
-        await self.vllm_client.sleep_level_1(model.port)
-        gpu_standby_mem = self.get_current_gpu_memory_usage(
-            model.vllm_engine_pid
-        )
+        # measure standby GPU memory
+        await self.sleep_level_1(model)
+        gpu_standby_mem = self.get_current_gpu_memory_usage(model.vllm_engine_pid)
         model.set_gpu_standby_memory_allocation(gpu_standby_mem)
 
-        # warm-up
-        await self.vllm_client.wake_up_persistent(model.port)
-        gpu_mem_model = self.get_current_gpu_memory_usage(
-            model.vllm_engine_pid
-        )
+        # warm-up and measure full GPU memory
+        await self.wake_up_from_cpu_persistent(model)
+        gpu_mem_model = self.get_current_gpu_memory_usage(model.vllm_engine_pid)
         model.set_gpu_memory_allocation(gpu_mem_model)
-        await self.vllm_client.sleep_level_1(model.port)
-        model.set_storage_location_to_cpu()
+
+        # default state after startup
+        await self.sleep_level_1(model)
 
         # ensure base model starts in GPU
         if model.is_base():
-            await self.vllm_client.wake_up_persistent(model.port)
-            model.set_storage_location_to_gpu()
+            await self.wake_up_from_cpu_persistent(model)
 
     async def stop_model_server(self, model: Model) -> None:
         logger.info(f"Stopping model {model.model_id}.")
