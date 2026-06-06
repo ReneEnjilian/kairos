@@ -9,10 +9,10 @@ models:
   #  port: 8002
   #  gpu_factor: 1.3
 
-  - model_id: Qwen/Qwen3-1.7B
-    relation: independent
-    port: 8003
-    gpu_factor: 1.3
+  #- model_id: Qwen/Qwen3-1.7B
+  #  relation: independent
+  #  port: 8003
+  #  gpu_factor: 1.3
 
 slo:
   accuracy: 0.95

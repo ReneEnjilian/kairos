@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from kairos.core.control.commands import ControlCommand
+from kairos.core.memory.memory_manager import MemoryManager
 from kairos.core.monitoring.monitor import CoreMonitor
 from kairos.core.scheduling.scheduler import CoreScheduler
 from kairos.ipc.server import CoreIpcServer
@@ -33,6 +34,7 @@ class CoreController:
         control_queue: asyncio.Queue[ControlCommand],
         monitor: CoreMonitor,
         scheduler: CoreScheduler,
+        memory_manager: MemoryManager,
     ) -> None:
         self.ipc_server = ipc_server
         self.control_queue = control_queue
@@ -45,8 +47,8 @@ class CoreController:
         self.dispatch_enabled.set()
 
         self.active_model: Model | None = None
-
-        self.docker = DockerContainer()
+        self.mem = memory_manager
+        self.docker = DockerContainer(self.mem)
         self.vllm_client = VLLMClient()
 
         # For continuous batching
@@ -372,22 +374,34 @@ class CoreController:
 
     async def start_model_server(self, model: Model) -> None:
         logger.info(f"Starting model {model.model_id}.")
-        await asyncio.to_thread(
+        vllm_engine_pid = await asyncio.to_thread(
             self.docker.start_container,
             model.model_id,
             model.port,
-            model.gpu_memory_allocation
+            model.gpu_memory_allocation_estimate
         )
-        # ensure that base model starts in GPU, quantized in CPU, rest in RAM
-        # TODO: add new field to command -> location
-        if model.relation == "quantized":
-            await self.vllm_client.sleep_level_1(model.port)
-            model.set_storage_location_to_cpu()
-        elif model.relation == "base":
+        model.set_engine_pid(vllm_engine_pid)
+
+        # get the memory usage in GPU during sleep
+        await self.vllm_client.sleep_level_1(model.port)
+        gpu_standby_mem = self.get_current_gpu_memory_usage(
+            model.vllm_engine_pid
+        )
+        model.set_gpu_standby_memory_allocation(gpu_standby_mem)
+
+        # warm-up
+        await self.vllm_client.wake_up_persistent(model.port)
+        gpu_mem_model = self.get_current_gpu_memory_usage(
+            model.vllm_engine_pid
+        )
+        model.set_gpu_memory_allocation(gpu_mem_model)
+        await self.vllm_client.sleep_level_1(model.port)
+        model.set_storage_location_to_cpu()
+
+        # ensure base model starts in GPU
+        if model.is_base():
+            await self.vllm_client.wake_up_persistent(model.port)
             model.set_storage_location_to_gpu()
-        else:
-            await self.vllm_client.sleep_level_2(model.port)
-            model.set_storage_location_to_disk()
 
     async def stop_model_server(self, model: Model) -> None:
         logger.info(f"Stopping model {model.model_id}.")
@@ -441,3 +455,10 @@ class CoreController:
         await self.vllm_client.reset_prefix_cache(port)
         model.set_storage_location_to_gpu()
         logger.info(f"Waking {model.model_id} from prefetch.")
+
+    def get_current_gpu_memory_usage(self, vllm_engine_pid: int) -> int:
+        gpu_mem = self.mem.get_gpu_memory_used_by_pid(
+            0,
+            vllm_engine_pid
+        )
+        return gpu_mem

@@ -1,7 +1,7 @@
 from kairos.core.memory.memory_manager import MemoryManager
 from kairos.core.catalog.model_variants_catalog import ModelVariantsCatalog
 from kairos.core.catalog.model import Model
-
+from kairos.core.scheduling.scheduler import ScheduleCommand
 from kairos.logger import init_logger
 
 
@@ -28,7 +28,7 @@ class CoreReconfiguration:
 
         self.snapshot: list[dict] = []
         self.monitoring_round = 0
-        self.command_sequence: list = []
+        self.command_sequence: list[ScheduleCommand] = []
         self.models: dict[str, Model] = {}
         self.model_scores: dict[str, float] = {}
         # self.model_ranking: list[Model] = []

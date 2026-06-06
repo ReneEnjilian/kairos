@@ -63,6 +63,7 @@ async def async_main() -> None:
         control_queue=control_queue,
         monitor=monitor,
         scheduler=scheduler,
+        memory_manager=memory_manager,
     )
 
     ipc_task = asyncio.create_task(

@@ -44,45 +44,45 @@ class VLLMClient:
     async def sleep_level_1(self, port: int) -> bool:
         return await self._post(
             f"http://localhost:{port}/sleep?level=1",
-            timeout=7.0,
+            timeout=10.0,
         )
 
     async def sleep_level_2(self, port: int) -> bool:
         return await self._post(
             f"http://localhost:{port}/sleep?level=2",
-            timeout=7.0,
+            timeout=10.0,
         )
 
     async def wake_up(self, port: int) -> bool:
         return await self._post(
             f"http://localhost:{port}/wake_up",
-            timeout=7.0,
+            timeout=10.0,
         )
 
     async def wake_up_persistent(self, port: int) -> bool:
         return await self._post(
             f"http://localhost:{port}/wake_up?persistent=true",
-            timeout=7.0,
+            timeout=10.0,
         )
 
     async def reset_prefix_cache(self, port: int) -> bool:
         return await self._post(
             f"http://localhost:{port}/reset_prefix_cache",
-            timeout=7.0,
+            timeout=10.0,
         )
 
     async def reload_weights(self, port: int) -> bool:
         return await self._post(
             f"http://localhost:{port}/collective_rpc",
             json_body={"method": "reload_weights"},
-            timeout=7.0,
+            timeout=10.0,
         )
 
     async def reload_weights_from_prefetch(self, port: int) -> bool:
         return await self._post(
             f"http://localhost:{port}/collective_rpc",
             json_body={"method": "reload_weights_from_prefetch"},
-            timeout=7.0,
+            timeout=10.0,
         )
 
     async def prefetch(self, port: int) -> bool:
@@ -94,7 +94,7 @@ class VLLMClient:
     async def evict(self, port: int) -> bool:
         return await self._post(
             f"http://localhost:{port}/evict",
-            timeout=7.0,
+            timeout=10.0,
         )
 
     '''Inference via chat-completion'''

@@ -9,8 +9,8 @@ class MemoryManager:
         self,
         disk_path: str | None = None,
         gpu_device_ids: list[int] | None = None,
-        cpu_safety_margin_percent: float = 0.10,
-        gpu_safety_margin_percent: float = 0.10,
+        cpu_safety_margin_percent: float = 0.05,
+        gpu_safety_margin_percent: float = 0.05,
         disk_safety_margin_percent: float = 0.05,
     ):
 
@@ -46,6 +46,16 @@ class MemoryManager:
         handle = self._get_gpu_handle(device_id)
         mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
         return int(mem_info.free)
+
+    def get_gpu_memory_used_by_pid(self, device_id: int, pid: int) -> int:
+        handle = self._get_gpu_handle(device_id)
+        processes = pynvml.nvmlDeviceGetComputeRunningProcesses(handle)
+
+        for process in processes:
+            if process.pid == pid:
+                return int(process.usedGpuMemory)
+
+        return 0
 
     def can_move_to_gpu(self, device_id: int, required_gpu_bytes: int) -> bool:
         total_bytes = self.get_total_gpu_bytes(device_id)

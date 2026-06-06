@@ -1,5 +1,4 @@
-from dataclasses import dataclass
-from collections import OrderedDict
+import math
 
 
 class Model:
@@ -51,7 +50,10 @@ class Model:
 
         # calculate memory requirement (estimate)
         self.gpu_factor = gpu_factor
-        self.gpu_memory_allocation: float = self.size * self.gpu_factor
+        self.gpu_memory_allocation_estimate: int = math.ceil(self.size * self.gpu_factor)
+        self.gpu_memory_allocation: int | None = None
+        self.gpu_standby_memory_allocation: int | None = None
+        self.vllm_engine_pid: int | None = None
 
     def print_all_fields(self) -> None:
         print(f"relation: {self.relation}")
@@ -67,19 +69,12 @@ class Model:
         print(f"activation_type: {self.activation_type}")
         print(f"storage_location: {self.storage_location}")
         print(f"gpu_factor: {self.gpu_factor}")
+        print(f"gpu_memory_allocation_estimate: {self.gpu_memory_allocation_estimate}")
         print(f"gpu_memory_allocation: {self.gpu_memory_allocation}")
+        print(f"gpu_standby_memory_allocation: {self.gpu_standby_memory_allocation}")
+        print(f"vllm_engine_pid: {self.vllm_engine_pid}")
         print(f"latency: {self.latency}")
         print(f"accuracy: {self.accuracy}")
-
-
-    '''
-    def add_result(self, sample_id: str, result: dict) -> None:
-        self.results[sample_id] = result
-        self.results.move_to_end(sample_id)
-
-        if len(self.results) > self.max_cached_results:
-            self.results.popitem(last=False)
-    '''
 
     def set_evaluation_results(self, results: list[dict]) -> None:
         self.evaluation_results = list(results)
@@ -129,8 +124,14 @@ class Model:
     def is_independent(self) -> bool:
         return self.relation == "independent"
 
-    def update_gpu_allocation(self, gpu_factor: float) -> None:
-        self.gpu_memory_allocation = self.size * gpu_factor
+    def set_gpu_memory_allocation(self, gpu_memory_allocation: int) -> None:
+        self.gpu_memory_allocation = gpu_memory_allocation
+
+    def set_gpu_standby_memory_allocation(self, gpu_standby_memory_allocation: int) -> None:
+        self.gpu_standby_memory_allocation = gpu_standby_memory_allocation
+
+    def set_engine_pid(self, pid: int) -> None:
+        self.vllm_engine_pid = pid
 
 
 
