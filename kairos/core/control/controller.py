@@ -5,7 +5,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from kairos.core.control.commands import ControlCommand
+from kairos.core.control.commands import ControlCommand, ControlKind
 from kairos.core.memory.memory_manager import MemoryManager
 from kairos.core.monitoring.monitor import CoreMonitor
 from kairos.core.scheduling.scheduler import CoreScheduler
@@ -184,55 +184,55 @@ class CoreController:
             command = await self.control_queue.get()
 
             try:
-                if command.kind == "START_MODEL_SERVER":
+                if command.kind == ControlKind.START_MODEL_SERVER:
                     if self.dispatch_enabled.is_set():
                         self.dispatch_enabled.clear()
                     await self.start_model_server(command.model[0])
                     self.dispatch_enabled.set()
 
-                if command.kind == "STOP_MODEL_SERVER":
+                if command.kind == ControlKind.STOP_MODEL_SERVER:
                     await self.stop_model_server(command.model[0])
 
-                if command.kind == "L1_SLEEP":
+                if command.kind == ControlKind.L1_SLEEP:
                     await self.sleep_level_1(command.model[0])
 
-                if command.kind == "L2_SLEEP":
+                if command.kind == ControlKind.L2_SLEEP:
                     await self.sleep_level_2(command.model[0])
 
-                if command.kind == "WAKE_UP_FROM_CPU":
+                if command.kind == ControlKind.WAKE_UP_FROM_CPU:
                     await self.wake_up_from_cpu(command.model[0])
 
-                if command.kind == "WAKE_UP_PERSISTENT":
+                if command.kind == ControlKind.WAKE_UP_PERSISTENT:
                     await self.wake_up_from_cpu(command.model[0])
 
-                if command.kind == "WAKE_UP_FROM_DISK":
+                if command.kind == ControlKind.WAKE_UP_FROM_DISK:
                     await self.wake_up_from_disk(command.model[0])
 
-                if command.kind == "PREFETCH":
+                if command.kind == ControlKind.PREFETCH:
                     await self.prefetch_weights(command.model[0])
 
-                if command.kind == "WAKE_UP_FROM_PREFETCH":
+                if command.kind == ControlKind.WAKE_UP_FROM_PREFETCH:
                     await self.wake_up_from_prefetch(command.model[0])
 
-                if command.kind == "PAUSE_DISPATCH":
+                if command.kind == ControlKind.PAUSE_DISPATCH:
                     if self.dispatch_enabled.is_set():
                         self.dispatch_enabled.clear()
                         logger.info(
                             "Dispatch paused."
                         )
 
-                if command.kind == "RESUME_DISPATCH":
+                if command.kind == ControlKind.RESUME_DISPATCH:
                     if not self.dispatch_enabled.is_set():
                         self.dispatch_enabled.set()
                         logger.info(
                             "Dispatch resumed."
                         )
 
-                if command.kind == "SET_ACTIVE_MODEL":
+                if command.kind == ControlKind.SET_ACTIVE_MODEL:
                     # TODO: Think about requests not returned yet
                     self.active_model = command.model
 
-                if command.kind == "EVALUATE_MODEL":
+                if command.kind == ControlKind.EVALUATE_MODEL:
                     pass
 
             finally:

@@ -2,6 +2,7 @@ from kairos.core.memory.memory_manager import MemoryManager
 from kairos.core.catalog.model_variants_catalog import ModelVariantsCatalog
 from kairos.core.catalog.model import Model
 from kairos.core.scheduling.scheduler import ScheduleCommand
+from kairos.core.control.commands import ControlKind
 from kairos.logger import init_logger
 
 
@@ -45,7 +46,7 @@ class CoreReconfiguration:
         # get models we want to reconfigure
         self.models = self.get_reconfigurable_models()
 
-        # TODO: if model is discarded and not on disk -> add to command sequence to get sent to disk (this step should come here)
+        # discarded models are sent to disk
         self.discard_models_to_disk()
 
         # compute model scores for feasible and infeasible models
@@ -105,9 +106,28 @@ class CoreReconfiguration:
         for model in all_models:
             if model.discarded:
                 location = model.get_storage_location()
-                if location=="cpu":
-                    ScheduleCommand(
-                        kind=""
+                if location == "cpu":
+                    self.command_sequence.append(
+                        ScheduleCommand(
+                            kind=ControlKind.EVICT,
+                            model=[model],
+                            interference=False,
+                        )
+                    )
+                elif location == "gpu":
+                    self.command_sequence.append(
+                        ScheduleCommand(
+                            kind=ControlKind.L1_SLEEP,
+                            model=[model],
+                            interference=False,
+                        )
+                    )
+                    self.command_sequence.append(
+                        ScheduleCommand(
+                            kind=ControlKind.EVICT,
+                            model=[model],
+                            interference=False,
+                        )
                     )
 
 
