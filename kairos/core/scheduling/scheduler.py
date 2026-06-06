@@ -38,8 +38,8 @@ class CoreScheduler:
         self.catalog = ModelVariantsCatalog()
 
     async def scheduling_loop(self) -> None:
-        await self.initiate_model_servers()
-        await self.set_active_model(self.catalog.get_base())
+        #await self.initiate_model_servers()
+        #await self.set_active_model(self.catalog.get_base())
         while True:
             job = await self.job_queue.get()
 
@@ -78,7 +78,7 @@ class CoreScheduler:
             if model.relation != "base":
                 await self.control_queue.put(
                    ControlCommand(
-                       kind="START_MODEL_SERVER",
+                       kind=ControlKind.START_MODEL_SERVER,
                        model=[model],
                    )
                 )
@@ -86,7 +86,7 @@ class CoreScheduler:
         if base_model is not None:
             await self.control_queue.put(
                 ControlCommand(
-                    kind="START_MODEL_SERVER",
+                    kind=ControlKind.START_MODEL_SERVER,
                     model=[base_model],
                 )
             )
@@ -94,7 +94,7 @@ class CoreScheduler:
     async def set_active_model(self, model: Model) -> None:
         await self.control_queue.put(
             ControlCommand(
-                kind="SET_ACTIVE_MODEL",
+                kind=ControlKind.SET_ACTIVE_MODEL,
                 model=[model],
             )
         )

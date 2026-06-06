@@ -230,7 +230,7 @@ class CoreController:
 
                 if command.kind == ControlKind.SET_ACTIVE_MODEL:
                     # TODO: Think about requests not returned yet
-                    self.active_model = command.model
+                    self.active_model = command.model[0]
 
                 if command.kind == ControlKind.EVALUATE_MODEL:
                     pass

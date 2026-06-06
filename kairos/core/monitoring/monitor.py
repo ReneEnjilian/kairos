@@ -71,7 +71,7 @@ class CoreMonitor:
     async def monitor_loop(self) -> None:
         models = self.catalog.get_catalog()
         self.expected_evaluation_models = set(models.keys())
-
+        self.test_reconfiguration()
         while True:
             item = await self.monitoring_queue.get()
 
@@ -214,6 +214,43 @@ class CoreMonitor:
             return text
 
         return match.group(0)
+
+    def test_reconfiguration(self) -> None:
+        models = self.catalog.get_catalog()
+        for model in models.values():
+            if model.is_base():
+                model.latency = 90
+                model.accuracy = 1.0
+                model.set_storage_location_to_gpu()
+                model.gpu_memory_allocation = 9774825472
+                model.gpu_sleep_memory_allocation = 966787072
+                model.gpu_wake_memory_allocation = 8808038400
+            if model.is_quantized() and model.weight_bits == 8:
+                model.accuracy = 0.95
+                model.latency = 80
+                model.set_storage_location_to_cpu()
+                model.gpu_memory_allocation = 6239027200
+                model.gpu_sleep_memory_allocation = 1071644672
+                model.gpu_wake_memory_allocation = 5167382528
+            if model.is_quantized() and model.weight_bits == 4:
+                model.accuracy = 0.93
+                model.latency = 60
+                model.set_storage_location_to_cpu()
+                model.gpu_memory_allocation = 5454692352
+                model.gpu_sleep_memory_allocation = 1019215872
+                model.gpu_wake_memory_allocation = 4435476480
+            if model.is_independent():
+                model.accuracy = 0.8
+                model.latency = 80
+                model.set_storage_location_to_cpu()
+                model.gpu_memory_allocation = 8594128896
+                model.gpu_sleep_memory_allocation = 866123776
+                model.gpu_wake_memory_allocation = 7728005120
+                model.failed_rounds = 1
+        snapshot = []
+        x = 0
+
+        self.reconfiguration.trigger_reconfiguration(snapshot, x)
 
 
 

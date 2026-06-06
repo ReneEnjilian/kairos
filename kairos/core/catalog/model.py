@@ -69,10 +69,14 @@ class Model:
         print(f"activation_bits: {self.activation_bits}")
         print(f"activation_type: {self.activation_type}")
         print(f"storage_location: {self.storage_location}")
+
+        print(f"failed_rounds: {self.failed_rounds}")
+        print(f"discarded: {self.discarded}")
         print(f"gpu_factor: {self.gpu_factor}")
         print(f"gpu_memory_allocation_estimate: {self.gpu_memory_allocation_estimate}")
         print(f"gpu_memory_allocation: {self.gpu_memory_allocation}")
-        print(f"gpu_standby_memory_allocation: {self.gpu_standby_memory_allocation}")
+        print(f"gpu_sleep_memory_allocation: {self.gpu_sleep_memory_allocation}")
+        print(f"gpu_wake_memory_allocation: {self.gpu_wake_memory_allocation}")
         print(f"vllm_engine_pid: {self.vllm_engine_pid}")
         print(f"latency: {self.latency}")
         print(f"accuracy: {self.accuracy}")
@@ -127,10 +131,10 @@ class Model:
 
     def set_gpu_memory_allocation(self, gpu_memory_allocation: int) -> None:
         self.gpu_memory_allocation = gpu_memory_allocation
+        self.gpu_wake_memory_allocation = self.gpu_memory_allocation - self.gpu_sleep_memory_allocation
 
     def set_gpu_sleep_memory_allocation(self, gpu_sleep_memory_allocation: int) -> None:
         self.gpu_sleep_memory_allocation = gpu_sleep_memory_allocation
-        self.gpu_wake_memory_allocation = self.gpu_memory_allocation - gpu_sleep_memory_allocation
 
     def set_engine_pid(self, pid: int) -> None:
         self.vllm_engine_pid = pid

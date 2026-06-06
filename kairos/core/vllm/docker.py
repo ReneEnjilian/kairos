@@ -37,7 +37,7 @@ class DockerContainer:
             command=[
                 model_id,
                 "--enable-sleep-mode",
-                "--max-model-len", "2048",
+                "--max-model-len", "1024",
                 "--gpu-memory-utilization", str(gpu_memory_utilization),
             ],
             detach=True,
