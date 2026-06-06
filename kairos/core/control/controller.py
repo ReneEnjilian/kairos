@@ -385,8 +385,8 @@ class CoreController:
 
         # measure standby GPU memory
         await self.sleep_level_1(model)
-        gpu_standby_mem = self.get_current_gpu_memory_usage(model.vllm_engine_pid)
-        model.set_gpu_standby_memory_allocation(gpu_standby_mem)
+        gpu_sleep_mem = self.get_current_gpu_memory_usage(model.vllm_engine_pid)
+        model.set_gpu_sleep_memory_allocation(gpu_sleep_mem)
 
         # warm-up and measure full GPU memory
         await self.wake_up_from_cpu_persistent(model)

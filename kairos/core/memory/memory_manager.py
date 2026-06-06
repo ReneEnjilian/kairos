@@ -10,7 +10,7 @@ class MemoryManager:
         disk_path: str | None = None,
         gpu_device_ids: list[int] | None = None,
         cpu_safety_margin_percent: float = 0.05,
-        gpu_safety_margin_percent: float = 0.05,
+        gpu_safety_margin_percent: float = 0.005,
         disk_safety_margin_percent: float = 0.05,
     ):
 

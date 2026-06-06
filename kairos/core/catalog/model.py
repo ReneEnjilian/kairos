@@ -52,7 +52,8 @@ class Model:
         self.gpu_factor = gpu_factor
         self.gpu_memory_allocation_estimate: int = math.ceil(self.size * self.gpu_factor)
         self.gpu_memory_allocation: int | None = None
-        self.gpu_standby_memory_allocation: int | None = None
+        self.gpu_sleep_memory_allocation: int | None = None
+        self.gpu_wake_memory_allocation: int | None = None
         self.vllm_engine_pid: int | None = None
 
     def print_all_fields(self) -> None:
@@ -127,8 +128,9 @@ class Model:
     def set_gpu_memory_allocation(self, gpu_memory_allocation: int) -> None:
         self.gpu_memory_allocation = gpu_memory_allocation
 
-    def set_gpu_standby_memory_allocation(self, gpu_standby_memory_allocation: int) -> None:
-        self.gpu_standby_memory_allocation = gpu_standby_memory_allocation
+    def set_gpu_sleep_memory_allocation(self, gpu_sleep_memory_allocation: int) -> None:
+        self.gpu_sleep_memory_allocation = gpu_sleep_memory_allocation
+        self.gpu_wake_memory_allocation = self.gpu_memory_allocation - gpu_sleep_memory_allocation
 
     def set_engine_pid(self, pid: int) -> None:
         self.vllm_engine_pid = pid
