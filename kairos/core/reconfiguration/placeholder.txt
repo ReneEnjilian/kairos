@@ -1,7 +1,7 @@
 from kairos.core.memory.memory_manager import MemoryManager
 from kairos.core.catalog.model_variants_catalog import ModelVariantsCatalog
 from kairos.core.catalog.model import Model
-from kairos.core.scheduling.scheduler import CoreScheduler, ScheduleCommand
+from kairos.core.scheduling.scheduler import ScheduleCommand
 from kairos.core.control.commands import ControlKind
 from kairos.logger import init_logger
 
@@ -15,7 +15,6 @@ class CoreReconfiguration:
             accuracy_slo: float,
             latency_slo: float,
             memory_manager: MemoryManager,
-            scheduler: CoreScheduler,
             weight_accuracy: float = 0.5,
             weight_latency: float = 0.5,
     ):
@@ -24,7 +23,6 @@ class CoreReconfiguration:
         self.mem = memory_manager
         self.weight_accuracy = weight_accuracy
         self.weight_latency = weight_latency
-        self.scheduler = scheduler
         self.constant = 1000
 
         self.catalog = ModelVariantsCatalog()
@@ -40,47 +38,25 @@ class CoreReconfiguration:
         self.free_gpu_bytes_override: int | None = None
 
     # maybe async ?
-    async def trigger_reconfiguration(self, snapshot: list[dict], monitoring_round: int):
+    def trigger_reconfiguration(self, snapshot: list[dict], monitoring_round: int):
         self.command_sequence.clear()
         self.model_scores.clear()
         self.snapshot = snapshot
         self.monitoring_round = monitoring_round
-        await self.reconfiguration_algorithm()
+        self.reconfiguration_algorithm()
 
-    async def reconfiguration_algorithm(self):
+    def reconfiguration_algorithm(self):
         # get models we want to reconfigure
         self.models = self.get_reconfigurable_models()
-
-        # get current placement
-        current_placement = self.get_current_placement()
-
-        if self.monitoring_round == 0:
-            base_model = self.catalog.get_base()
-
-            self.compute_evaluation_commands(
-                current_placement=current_placement,
-                target_placement=current_placement,
-                pre_evaluated_model_ids={base_model.model_id},
-                evaluate_initial_gpu_models=False,
-            )
-
-            logger.info("Round-0 current placement: %s", {
-                location: [model.model_id for model in models]
-                for location, models in current_placement.items()
-            })
-
-            logger.info("Round-0 command sequence: %s", [
-                (command.kind, [model.model_id for model in command.model])
-                for command in self.command_sequence
-            ])
-
-            return
 
         # compute model scores
         self.compute_model_scores()
 
         # compute target serving placement
         target_placement = self.compute_serving_placement()
+
+        # get current placement
+        current_placement = self.get_current_placement()
 
         logger.info("Model scores: %s", {
             model.model_id: self.model_scores[model.model_id]
@@ -112,9 +88,6 @@ class CoreReconfiguration:
             (command.kind, [model.model_id for model in command.model])
             for command in self.command_sequence
         ])
-
-        for command in self.command_sequence:
-            await self.scheduler.add_to_schedule_queue(command)
 
     def get_reconfigurable_models(self) -> dict[str, Model]:
         return {
@@ -431,8 +404,6 @@ class CoreReconfiguration:
             current_placement: dict[str, list[Model]],
             target_placement: dict[str, list[Model]],
             device_id: int = 0,
-            pre_evaluated_model_ids: set[str] | None = None,
-            evaluate_initial_gpu_models: bool = True,
     ) -> None:
         if not target_placement["gpu"]:
             raise RuntimeError("Target GPU placement is empty. Cannot evaluate models.")
@@ -440,7 +411,7 @@ class CoreReconfiguration:
         active_model = target_placement["gpu"][0]
 
         current_gpu_models = list(target_placement["gpu"])
-        evaluated_model_ids: set[str] = set(pre_evaluated_model_ids or set())
+        evaluated_model_ids: set[str] = set()
 
         simulated_free_bytes = self._compute_free_bytes_after_target_placement(
             current_placement=current_placement,
@@ -451,23 +422,15 @@ class CoreReconfiguration:
         # ------------------------------------------------------------
         # 1. Evaluate all models that are already on GPU after serving placement.
         # ------------------------------------------------------------
-        if evaluate_initial_gpu_models:
-            initial_evaluation_batch = [
-                model
-                for model in current_gpu_models
-                if model.model_id not in evaluated_model_ids
-            ]
+        self._append_command(
+            kind=ControlKind.EVALUATE_MODEL,
+            models=current_gpu_models,
+            interference=True,
+            samples=self.snapshot,
+        )
 
-            if initial_evaluation_batch:
-                self._append_command(
-                    kind=ControlKind.EVALUATE_MODEL,
-                    models=initial_evaluation_batch,
-                    interference=True,
-                    samples=self.snapshot,
-                )
-
-                for model in initial_evaluation_batch:
-                    evaluated_model_ids.add(model.model_id)
+        for model in current_gpu_models:
+            evaluated_model_ids.add(model.model_id)
 
         # ------------------------------------------------------------
         # 2. Evaluate remaining models in batches.
@@ -601,7 +564,7 @@ class CoreReconfiguration:
             if weight > capacity:
                 continue
 
-            score = self.model_scores.get(model.model_id, 0.0)
+            score = self.model_scores[model.model_id]
 
             new_states: dict[int, tuple[int, float, tuple[Model, ...]]] = {}
 

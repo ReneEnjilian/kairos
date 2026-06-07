@@ -30,13 +30,21 @@ async def async_main() -> None:
     control_queue: asyncio.Queue[ControlCommand] = asyncio.Queue()
     accuracy, latency, weight_accuracy, weight_latency = parse_objectives_from_config(config_path)
     monitoring = parse_monitoring_from_config(config_path)
+    scheduling = parse_scheduling_from_config(config_path)
 
     memory_manager = MemoryManager()
+
+    scheduler = CoreScheduler(
+        memory_manager=memory_manager,
+        control_queue=control_queue,
+        **scheduling,
+    )
 
     reconfiguration = CoreReconfiguration(
         memory_manager=memory_manager,
         weight_accuracy=weight_accuracy,
         weight_latency=weight_latency,
+        scheduler=scheduler,
         accuracy_slo=accuracy,
         latency_slo=latency,
     )
@@ -49,13 +57,6 @@ async def async_main() -> None:
         #weight_accuracy=weight_accuracy,
         #weight_latency=weight_latency,
         **monitoring,
-    )
-
-    scheduling = parse_scheduling_from_config(config_path)
-    scheduler = CoreScheduler(
-        memory_manager=memory_manager,
-        control_queue=control_queue,
-        **scheduling,
     )
 
     controller = CoreController(

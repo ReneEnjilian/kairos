@@ -71,7 +71,7 @@ class CoreMonitor:
     async def monitor_loop(self) -> None:
         models = self.catalog.get_catalog()
         self.expected_evaluation_models = set(models.keys())
-        self.test_reconfiguration()
+        await self.test_reconfiguration()
         while True:
             item = await self.monitoring_queue.get()
 
@@ -93,7 +93,7 @@ class CoreMonitor:
                             self.completed_evaluation_models.add(active_model)
 
                             # call reconfiguration
-                            self.reconfiguration.trigger_reconfiguration(
+                            await self.reconfiguration.trigger_reconfiguration(
                                 list(self.evaluation_snapshot),
                                 self.monitoring_round
                             )
@@ -126,7 +126,7 @@ class CoreMonitor:
                         self.monitoring_round += 1
                         self.evaluation_snapshot = list(self.samples)
                         # call reconfiguration
-                        self.reconfiguration.trigger_reconfiguration(
+                        await self.reconfiguration.trigger_reconfiguration(
                             list(self.evaluation_snapshot),
                             self.monitoring_round
                         )
@@ -215,7 +215,7 @@ class CoreMonitor:
 
         return match.group(0)
 
-    def test_reconfiguration(self) -> None:
+    async def test_reconfiguration(self) -> None:
         models = self.catalog.get_catalog()
         for model in models.values():
             if model.is_base():
@@ -248,9 +248,18 @@ class CoreMonitor:
                 model.gpu_wake_memory_allocation = 7728005120
                 model.failed_rounds = 1
         snapshot = []
-        x = 0
+        x = 1
+        actual_free_bytes = self.mem.get_free_gpu_bytes(0)
+        model_bytes = 0
+        for model in models.values():
+            if model.is_base():
+                model_bytes += model.gpu_memory_allocation
+            else:
+                model_bytes += model.gpu_sleep_memory_allocation
 
-        self.reconfiguration.trigger_reconfiguration(snapshot, x)
+        fake_free_bytes = actual_free_bytes - model_bytes
+        self.reconfiguration.free_gpu_bytes_override = fake_free_bytes
+        await self.reconfiguration.trigger_reconfiguration(snapshot, x)
 
 
 

@@ -33,7 +33,7 @@ class CoreScheduler:
         self.mem = memory_manager
         self.control_queue = control_queue
 
-        self.job_queue: asyncio.Queue[ScheduleCommand] = asyncio.Queue()
+        self.schedule_queue: asyncio.Queue[ScheduleCommand] = asyncio.Queue()
         self.arrival_timestamps: deque[float] = deque(maxlen=1000)
         self.catalog = ModelVariantsCatalog()
 
@@ -41,12 +41,12 @@ class CoreScheduler:
         #await self.initiate_model_servers()
         #await self.set_active_model(self.catalog.get_base())
         while True:
-            job = await self.job_queue.get()
+            job = await self.schedule_queue.get()
 
             try:
                 await self._handle_job(job)
             finally:
-                self.job_queue.task_done()
+                self.schedule_queue.task_done()
 
     async def _handle_job(self, job) -> None:
         # 1. inspect current model state
@@ -99,7 +99,12 @@ class CoreScheduler:
             )
         )
 
+    async def add_to_schedule_queue(self, command: ScheduleCommand) -> None:
+        await self.schedule_queue.put(command)
+
     '''Timestamps-related methods'''
 
     def record_arrival(self, timestamp: float) -> None:
         self.arrival_timestamps.append(timestamp)
+
+
