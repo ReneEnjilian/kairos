@@ -46,6 +46,18 @@ class CoreReconfiguration:
         self.snapshot = snapshot
         self.monitoring_round = monitoring_round
         await self.reconfiguration_algorithm()
+        # await self.hardcode_evaluation()
+
+    async def hardcode_evaluation(self):
+        self.models = self.catalog.get_catalog()
+        await self.scheduler.add_to_schedule_queue(
+            ScheduleCommand(
+                model=list(self.models.values()),
+                samples=self.snapshot,
+                interference=False,
+                kind=ControlKind.EVALUATE_MODEL,
+            )
+        )
 
     async def reconfiguration_algorithm(self):
         # get models we want to reconfigure

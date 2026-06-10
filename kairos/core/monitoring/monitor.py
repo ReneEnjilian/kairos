@@ -71,7 +71,7 @@ class CoreMonitor:
     async def monitor_loop(self) -> None:
         models = self.catalog.get_catalog()
         self.expected_evaluation_models = set(models.keys())
-        await self.test_reconfiguration()
+        #await self.test_reconfiguration()
         while True:
             item = await self.monitoring_queue.get()
 
@@ -85,7 +85,7 @@ class CoreMonitor:
                         self.first_round_results.append(result)
 
                         if len(self.first_round_results) == self.sample_size:
-                            self.evaluation_snapshot = list(self.samples)
+                            self.evaluation_snapshot = self._make_evaluation_snapshot()
 
                             active_model = result["active_model"]
                             model = self.catalog.get_model(active_model)
@@ -124,7 +124,7 @@ class CoreMonitor:
                         }
 
                         self.monitoring_round += 1
-                        self.evaluation_snapshot = list(self.samples)
+                        self.evaluation_snapshot = self._make_evaluation_snapshot()
                         # call reconfiguration
                         await self.reconfiguration.trigger_reconfiguration(
                             list(self.evaluation_snapshot),
@@ -158,6 +158,14 @@ class CoreMonitor:
         if not ground_truth:
             raise ValueError("Cannot compute SLIs: base model has no evaluation results.")
 
+        base_by_id = {
+            result["eval_id"]: result
+            for result in ground_truth
+        }
+
+        if len(base_by_id) != len(ground_truth):
+            raise ValueError("Cannot compute SLIs: duplicate eval_id values in base results.")
+
         for model_id in self.expected_evaluation_models:
             model = self.catalog.get_model(model_id)
             evaluation_results = model.get_evaluation_results()
@@ -173,20 +181,37 @@ class CoreMonitor:
                     f"expected {len(ground_truth)} results, got {len(evaluation_results)}."
                 )
 
+            model_by_id = {
+                result["eval_id"]: result
+                for result in evaluation_results
+            }
+
+            if len(model_by_id) != len(evaluation_results):
+                raise ValueError(
+                    f"Cannot compute SLIs for {model_id}: duplicate eval_id values."
+                )
+
+            if set(base_by_id.keys()) != set(model_by_id.keys()):
+                raise ValueError(
+                    f"Cannot compute accuracy for {model_id}: eval_id sets do not match."
+                )
+
             # Accuracy relative to base model output
             correct = 0
 
-            for base_result, model_result in zip(ground_truth, evaluation_results):
+            for eval_id, base_result in base_by_id.items():
+                model_result = model_by_id[eval_id]
+
                 base_answer = self._normalize_answer(base_result["kairos"])
                 model_answer = self._normalize_answer(model_result["kairos"])
 
                 if base_answer == model_answer:
                     correct += 1
 
-            accuracy = correct / len(ground_truth)
+            accuracy = correct / len(base_by_id)
             model.set_accuracy(accuracy)
 
-            # Latency: p95 after ignoring first 5 results
+            # Latency: p95 after ignoring first 5 returned results
             latencies = [
                 result["infer_latency_ms"]
                 for result in evaluation_results[5:]
@@ -214,6 +239,16 @@ class CoreMonitor:
             return text
 
         return match.group(0)
+
+    def _make_evaluation_snapshot(self) -> list[dict]:
+        snapshot: list[dict] = []
+
+        for eval_id, payload in enumerate(self.samples):
+            sample = dict(payload)
+            sample["eval_id"] = eval_id
+            snapshot.append(sample)
+
+        return snapshot
 
     async def test_reconfiguration(self) -> None:
         models = self.catalog.get_catalog()

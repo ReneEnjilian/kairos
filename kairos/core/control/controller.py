@@ -256,7 +256,7 @@ class CoreController:
                     eval_results = await self.evaluate_models_on_same_samples(
                         command.model,
                         command.samples,
-                        self.max_in_flight
+                        4,
                     )
                     await self.monitor.evaluate_samples(eval_results)
                     self.dispatch_enabled.set()
@@ -345,20 +345,42 @@ class CoreController:
             samples: list[dict[str, Any]],
             max_in_flight: int,
     ) -> list[dict[str, Any]]:
-        semaphore = asyncio.Semaphore(max_in_flight)
+        results: list[dict[str, Any] | None] = [None] * len(samples)
 
-        async def run_one(sample: dict[str, Any]) -> dict[str, Any]:
-            async with semaphore:
-                return await self.evaluate_sample_on_model(
-                    model=model,
-                    sample=sample,
-                )
+        async def run_one(index: int, sample: dict[str, Any]) -> None:
+            results[index] = await self.evaluate_sample_on_model(
+                model=model,
+                sample=sample,
+            )
 
-        results = await asyncio.gather(
-            *(run_one(sample) for sample in samples)
-        )
+        pending: set[asyncio.Task[None]] = set()
+        sample_iter = iter(enumerate(samples))
 
-        return list(results)
+        # Start initial wave.
+        for _ in range(min(max_in_flight, len(samples))):
+            index, sample = next(sample_iter)
+            pending.add(asyncio.create_task(run_one(index, sample)))
+
+        # Refill whenever one request finishes.
+        while pending:
+            done, pending = await asyncio.wait(
+                pending,
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+
+            # Propagate exceptions immediately.
+            for task in done:
+                await task
+
+            for _ in range(len(done)):
+                try:
+                    index, sample = next(sample_iter)
+                except StopIteration:
+                    break
+
+                pending.add(asyncio.create_task(run_one(index, sample)))
+
+        return [result for result in results if result is not None]
 
     async def evaluate_models_on_same_samples(
             self,
@@ -366,21 +388,40 @@ class CoreController:
             samples: list[dict[str, Any]],
             max_in_flight_per_model: int,
     ) -> dict[str, list[dict[str, Any]]]:
-        results = await asyncio.gather(
-            *(
-                self.evaluate_model_on_samples(
-                    model=model,
-                    samples=samples,
-                    max_in_flight=max_in_flight_per_model,
-                )
-                for model in models
-            )
-        )
+        results: dict[str, list[dict[str, Any]]] = {}
 
-        return {
-            model.model_id: model_results
-            for model, model_results in zip(models, results)
-        }
+        for model in models:
+            #print(f"Evaluating model {model.model_id} on port {model.port}")
+
+            await self.warmup_model(
+                model=model,
+                sample=samples[0],
+                num_warmup=3,
+            )
+
+            model_results = await self.evaluate_model_on_samples(
+                model=model,
+                samples=samples,
+                max_in_flight=max_in_flight_per_model,
+            )
+
+            results[model.model_id] = model_results
+
+        return results
+
+    async def warmup_model(
+            self,
+            model: Model,
+            sample: dict[str, Any],
+            num_warmup: int = 3,
+    ) -> None:
+        for _ in range(num_warmup):
+            await self.vllm_client.chat_completion(
+                port=model.port,
+                model_id=model.model_id,
+                instruction=sample["instruction"],
+                prompt=sample["prompt"],
+            )
 
     '''
     later usage: next to active model, and multiple evaluating at once
@@ -428,6 +469,7 @@ class CoreController:
         # ensure base model starts in GPU
         if model.is_base():
             await self.wake_up_from_cpu_persistent(model)
+            logger.info("************** MODEL START-UP COMPLETE **************")
 
     async def stop_model_server(self, model: Model) -> None:
         logger.info(f"Stopping model {model.model_id}.")

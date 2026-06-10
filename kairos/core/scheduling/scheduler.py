@@ -38,8 +38,8 @@ class CoreScheduler:
         self.catalog = ModelVariantsCatalog()
 
     async def scheduling_loop(self) -> None:
-        #await self.initiate_model_servers()
-        #await self.set_active_model(self.catalog.get_base())
+        await self.initiate_model_servers()
+        await self.set_active_model(self.catalog.get_base())
         while True:
             job = await self.schedule_queue.get()
 
@@ -53,21 +53,15 @@ class CoreScheduler:
         # 2. check memory constraints
         # 3. forecast idle window
         # 4. emit controller commands in safe order
-        pass
-
-    async def warmup(self) -> None:
         '''
-        - use baseline model for this
-        start -> GPU
-        L2 -> disk
-        prefetch -> RAM
-        wake_from_prefetch -> GPU
-        L1 -> RAM
-        wake_persistent -> GPU
-        L1 -> RAM
-        evict -> disk
+        await self.control_queue.put(
+            ControlCommand(
+                model=job.model,
+                samples=job.samples,
+                kind=job.kind,
+            )
+        )
         '''
-        pass
 
     async def initiate_model_servers(self) -> None:
         models = self.catalog.get_catalog()
