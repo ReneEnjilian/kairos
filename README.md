@@ -380,9 +380,9 @@ The implementation is intended for controlled experiments and systems research. 
 
 ```bibtex
 @mastersthesis{enjilian2026kairos,
-  title  = {Kairos: Workload-Aware Reconfigurable LLM Serving},
+  title  = {Kairos: Workload-Aware and Reconfigurable LLM Serving},
   author = {Rene Enjilian},
-  school = {Heidelberg University},
+  school = {Technical University Berlin},
   year   = {2026}
 }
 ```
