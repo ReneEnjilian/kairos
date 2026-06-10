@@ -197,22 +197,37 @@ class CoreController:
                     await self.sleep_level_1(command.model[0])
 
                 if command.kind == ControlKind.L2_SLEEP:
+                    if self.dispatch_enabled.is_set():
+                        self.dispatch_enabled.clear()
                     await self.sleep_level_2(command.model[0])
+                    self.dispatch_enabled.set()
 
                 if command.kind == ControlKind.WAKE_UP_FROM_CPU:
+                    if self.dispatch_enabled.is_set():
+                        self.dispatch_enabled.clear()
                     await self.wake_up_from_cpu(command.model[0])
+                    self.dispatch_enabled.set()
 
                 if command.kind == ControlKind.WAKE_UP_PERSISTENT:
-                    await self.wake_up_from_cpu(command.model[0])
+                    if self.dispatch_enabled.is_set():
+                        self.dispatch_enabled.clear()
+                    await self.wake_up_from_cpu_persistent(command.model[0])
+                    self.dispatch_enabled.set()
 
                 if command.kind == ControlKind.WAKE_UP_FROM_DISK:
+                    if self.dispatch_enabled.is_set():
+                        self.dispatch_enabled.clear()
                     await self.wake_up_from_disk(command.model[0])
+                    self.dispatch_enabled.set()
 
                 if command.kind == ControlKind.PREFETCH:
                     await self.prefetch_weights(command.model[0])
 
                 if command.kind == ControlKind.WAKE_UP_FROM_PREFETCH:
+                    if self.dispatch_enabled.is_set():
+                        self.dispatch_enabled.clear()
                     await self.wake_up_from_prefetch(command.model[0])
+                    self.dispatch_enabled.set()
 
                 if command.kind == ControlKind.PAUSE_DISPATCH:
                     if self.dispatch_enabled.is_set():
@@ -230,10 +245,24 @@ class CoreController:
 
                 if command.kind == ControlKind.SET_ACTIVE_MODEL:
                     # TODO: Think about requests not returned yet
+                    if self.dispatch_enabled.is_set():
+                        self.dispatch_enabled.clear()
                     self.active_model = command.model[0]
+                    self.dispatch_enabled.set()
 
                 if command.kind == ControlKind.EVALUATE_MODEL:
-                    pass
+                    if self.dispatch_enabled.is_set():
+                        self.dispatch_enabled.clear()
+                    eval_results = await self.evaluate_models_on_same_samples(
+                        command.model,
+                        command.samples,
+                        self.max_in_flight
+                    )
+                    await self.monitor.evaluate_samples(eval_results)
+                    self.dispatch_enabled.set()
+
+                if command.kind == ControlKind.EVICT:
+                    await self.evict(command.model[0])
 
             finally:
                 self.control_queue.task_done()
@@ -452,6 +481,12 @@ class CoreController:
         await self.vllm_client.reset_prefix_cache(port)
         model.set_storage_location_to_gpu()
         logger.info(f"Waking {model.model_id} from prefetch.")
+
+    async def evict(self, model: Model) -> None:
+        port = model.port
+        await self.vllm_client.evict(model.port)
+        model.set_storage_location_to_cpu()
+        logger.info(f"Evicting {model.model_id} from GPU.")
 
     def get_current_gpu_memory_usage(self, vllm_engine_pid: int) -> int:
         gpu_mem = self.mem.get_gpu_memory_used_by_pid(
