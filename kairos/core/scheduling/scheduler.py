@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 import asyncio
 from dataclasses import dataclass
 from collections import deque
@@ -36,15 +37,22 @@ class CoreScheduler:
         self.schedule_queue: asyncio.Queue[ScheduleCommand] = asyncio.Queue()
         self.arrival_timestamps: deque[float] = deque(maxlen=1000)
         self.catalog = ModelVariantsCatalog()
+        self.poll_interval = 1.0
+        self.history_seconds = 30
+        self.idle_request_threshold = 1.0
 
     async def scheduling_loop(self) -> None:
-        await self.initiate_model_servers()
-        await self.set_active_model(self.catalog.get_base())
+        #await self.initiate_model_servers()
+        #await self.set_active_model(self.catalog.get_base())
         while True:
             job = await self.schedule_queue.get()
 
             try:
-                await self._handle_job(job)
+                if job.interference:
+                    await self._handle_job(job)
+                else:
+                    # case with forecasting
+                    pass
             finally:
                 self.schedule_queue.task_done()
 
@@ -53,7 +61,6 @@ class CoreScheduler:
         # 2. check memory constraints
         # 3. forecast idle window
         # 4. emit controller commands in safe order
-        '''
         await self.control_queue.put(
             ControlCommand(
                 model=job.model,
@@ -61,7 +68,6 @@ class CoreScheduler:
                 kind=job.kind,
             )
         )
-        '''
 
     async def initiate_model_servers(self) -> None:
         models = self.catalog.get_catalog()
@@ -100,5 +106,38 @@ class CoreScheduler:
 
     def record_arrival(self, timestamp: float) -> None:
         self.arrival_timestamps.append(timestamp)
+
+    def get_arrival_counts(self, now: float | None = None) -> list[int]:
+        """
+        Convert raw arrival timestamps into per-second request counts.
+
+        Returns a list ordered from oldest second to newest second.
+        Example:
+            [0, 2, 5, 1]
+        means:
+            4 seconds ago: 0 requests
+            3 seconds ago: 2 requests
+            2 seconds ago: 5 requests
+            latest second: 1 request
+        """
+        if now is None:
+            now = time.time()
+
+        end_second = int(now)
+        start_second = end_second - self.history_seconds + 1
+
+        counts = [0 for _ in range(self.history_seconds)]
+
+        # Copy the deque so we work on a stable snapshot.
+        timestamps = list(self.arrival_timestamps)
+
+        for timestamp in timestamps:
+            second = int(timestamp)
+
+            if start_second <= second <= end_second:
+                index = second - start_second
+                counts[index] += 1
+
+        return counts
 
 
