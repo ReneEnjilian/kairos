@@ -8,6 +8,11 @@ from kairos.core.memory.memory_manager import MemoryManager
 from kairos.core.control.commands import ControlCommand, ControlKind
 from kairos.core.catalog.model_variants_catalog import ModelVariantsCatalog
 from kairos.core.catalog.model import Model
+from kairos.core.scheduling.forecasting.moving_average import MovingAverageForecaster
+from kairos.core.scheduling.forecasting.ewma import EWMAForecaster
+from kairos.core.scheduling.forecasting.holt import HoltForecaster
+from kairos.core.scheduling.forecasting.holt_winters import HoltWintersForecaster
+
 from kairos.logger import init_logger
 
 logger = init_logger(__name__)
@@ -27,7 +32,7 @@ class CoreScheduler:
         memory_manager: MemoryManager,
         control_queue: asyncio.Queue[ControlCommand],
         method: str | None = "ewma",
-        window: int | None = None,
+        window: int | None = 3,
     ):
         self.method = method
         self.window = window
@@ -40,19 +45,21 @@ class CoreScheduler:
         self.poll_interval = 1.0
         self.history_seconds = 30
         self.idle_request_threshold = 1.0
+        self.lookback = 2 * self.window
+        self.forecaster = self._create_forecaster(self.method)
 
     async def scheduling_loop(self) -> None:
-        #await self.initiate_model_servers()
-        #await self.set_active_model(self.catalog.get_base())
+        # await self.initiate_model_servers()
+        # await self.set_active_model(self.catalog.get_base())
+
         while True:
             job = await self.schedule_queue.get()
 
             try:
-                if job.interference:
+                if not job.interference:
                     await self._handle_job(job)
                 else:
-                    # case with forecasting
-                    pass
+                    await self._handle_interfering_job(job)
             finally:
                 self.schedule_queue.task_done()
 
@@ -68,6 +75,12 @@ class CoreScheduler:
                 kind=job.kind,
             )
         )
+
+    async def _handle_interfering_job(self, job: ScheduleCommand) -> None:
+        while not self.predict_idle_window():
+            await asyncio.sleep(self.poll_interval)
+
+        await self._handle_job(job)
 
     async def initiate_model_servers(self) -> None:
         models = self.catalog.get_catalog()
@@ -139,5 +152,44 @@ class CoreScheduler:
                 counts[index] += 1
 
         return counts
+
+    def _create_forecaster(self, method: str | None):
+        if method is None:
+            method = "ewma"
+
+        method = method.lower()
+
+        if method == "moving_average":
+            return MovingAverageForecaster(lookback=self.lookback)
+
+        if method == "ewma":
+            return EWMAForecaster(alpha=0.5)
+
+        if method == "holt":
+            return HoltForecaster(alpha=0.5, beta=0.3)
+
+        if method == "holt_winters":
+            return HoltWintersForecaster(
+                alpha=0.5,
+                beta=0.3,
+                gamma=0.3,
+                season_length=10,
+            )
+
+        raise NotImplementedError(
+            f"Forecasting method '{method}' is not implemented yet."
+        )
+
+    def predict_idle_window(self) -> bool:
+        counts = self.get_arrival_counts()
+
+        predicted_counts = self.forecaster.forecast(
+            counts=counts,
+            horizon=self.window,
+        )
+
+        predicted_requests = sum(predicted_counts)
+
+        return predicted_requests <= self.idle_request_threshold
 
 
