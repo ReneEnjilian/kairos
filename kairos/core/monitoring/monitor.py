@@ -67,6 +67,7 @@ class CoreMonitor:
         self.completed_evaluation_models: set[str] = set()
         self.evaluation_snapshot: list[dict] = []
         self.reconfiguration = reconfiguration
+        self.sample_results: deque[dict] = deque(maxlen=self.sample_size)
 
     async def monitor_loop(self) -> None:
         models = self.catalog.get_catalog()
@@ -87,15 +88,21 @@ class CoreMonitor:
                         if len(self.first_round_results) == self.sample_size:
                             self.evaluation_snapshot = self._make_evaluation_snapshot()
 
-                            active_model = result["active_model"]
+                            first_round_results_with_ids: list[dict[str, Any]] = []
+
+                            for eval_id, result in enumerate(self.first_round_results):
+                                result_with_id = dict(result)
+                                result_with_id["eval_id"] = eval_id
+                                first_round_results_with_ids.append(result_with_id)
+
+                            active_model = str(first_round_results_with_ids[0]["active_model"])
                             model = self.catalog.get_model(active_model)
-                            model.set_evaluation_results(self.first_round_results)
+                            model.set_evaluation_results(first_round_results_with_ids)
                             self.completed_evaluation_models.add(active_model)
 
-                            # call reconfiguration
                             await self.reconfiguration.trigger_reconfiguration(
                                 list(self.evaluation_snapshot),
-                                self.monitoring_round
+                                self.monitoring_round,
                             )
 
                 elif isinstance(item, EvaluationItem):
@@ -114,7 +121,7 @@ class CoreMonitor:
                             failed = model_acc < self.accuracy_slo or model_lat > self.latency_slo
                             if self.discard > 0:
                                 model.update_failed_rounds(failed, self.discard)
-
+                        '''
                         self.completed_evaluation_models = set()
 
                         self.expected_evaluation_models = {
@@ -122,7 +129,16 @@ class CoreMonitor:
                             for model_id, model in self.catalog.get_catalog().items()
                             if not model.discarded
                         }
+                        '''
+                        base_model = self.catalog.get_base()
 
+                        self.completed_evaluation_models = {base_model.model_id}
+
+                        self.expected_evaluation_models = {
+                            model_id
+                            for model_id, model in self.catalog.get_catalog().items()
+                            if not model.discarded
+                        }
                         self.monitoring_round += 1
                         self.evaluation_snapshot = self._make_evaluation_snapshot()
                         # call reconfiguration

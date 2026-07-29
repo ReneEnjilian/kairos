@@ -4,9 +4,11 @@ client:
   endpoint: /infer
   keep_logs: true
   max_in_flight: 256
-  max_requests: 15
+  max_requests: 3000
   random_seed: 42
 
 workload_pattern:
-  type: poisson
-  rate: 2.0
+  type: periodic
+  base_rate: 6.0
+  amplitude: 5.5
+  period_seconds: 20

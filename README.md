@@ -1,394 +1,176 @@
 # Kairos
 
-<p align="center">
-  <b>Workload-aware reconfigurable LLM serving</b>
-</p>
+**Workload-aware and reconfigurable LLM serving, built on vLLM.**
 
-<p align="center">
-  <i>Continuous monitoring, adaptive model selection, and memory-aware runtime reconfiguration for LLM inference.</i>
-</p>
+Kairos treats the serving configuration — which model serves, where model weights
+reside, and when the system may adapt — as a runtime decision instead of a
+deployment-time constant. It monitors the live request stream, evaluates candidate
+models on sampled real requests, and reconfigures model selection and placement
+during serving, subject to user-defined accuracy and latency objectives (SLOs).
 
-<p align="center">
-  <img src="https://img.shields.io/badge/status-research%20prototype-blue" />
-  <img src="https://img.shields.io/badge/python-3.10%2B-blue" />
-  <img src="https://img.shields.io/badge/backend-vLLM-green" />
-  <img src="https://img.shields.io/badge/platform-NVIDIA%20GPU-76B900" />
-</p>
+Developed as a Master's thesis at TU Berlin (DAMS group, supervised by
+Prof. Matthias Boehm and Prof. Volker Markl), graded 1.0.
+📄 [Thesis PDF](⚠️ VERIFY: link or `docs/thesis.pdf`)
 
 ---
 
-## Overview
+## Why
 
-Kairos is a research system for adaptive large language model serving.
+Static LLM deployments pick one model and one placement before the first request
+arrives. But the best configuration depends on the workload: a quantized or smaller
+model can cut p95 latency substantially while still matching the base model's
+answers — whether it does depends on the task, the quantization scheme, and the
+hardware, and can only be measured at runtime. Engines like vLLM make a *given*
+configuration fast; Kairos decides *when to change* the configuration.
 
-Instead of serving all requests with a fixed model configuration, Kairos continuously observes the incoming workload, evaluates alternative models on sampled requests, and reconfigures the serving setup at runtime.
+## Design principles
 
-The system is designed around one central question:
+| | Principle | Realized by |
+|---|---|---|
+| P1 | **Continuous monitoring** — measure candidate models on sampled live requests, with the base model's outputs as accuracy reference (no labels needed) | Monitoring component |
+| P2 | **Runtime reconfigurability** — switch the active model and move weights across GPU / CPU / disk while serving | Reconfiguration + vLLM extensions |
+| P3 | **Interference-aware scheduling** — delay disruptive commands until a forecasted idle window | Scheduler (Holt-Winters et al.) |
 
-> Which model should serve the current workload, and where should all other models be placed to enable fast adaptation?
+## Architecture
 
-Kairos combines online monitoring, background evaluation, model ranking, memory-aware placement, and runtime control over vLLM model servers. It can switch the active model, keep alternative models warm or prefetched, and move models between GPU, CPU, and disk depending on current workload behavior and service objectives.
+![Kairos architecture](⚠️ VERIFY: export thesis Fig. 3.2 to docs/architecture.png)
 
----
+Two processes connected by a ZeroMQ IPC layer:
 
-## Motivation
+- **KairosAPI** — HTTP entry point (`/infer`); validates requests, records arrival timestamps.
+- **KairosCore** — orchestration:
+  - **Controller** — admits requests, dispatches them *concurrently* to the active
+    vLLM server (one async task per request, exposing overlap for continuous
+    batching), executes control commands, runs candidate evaluations.
+  - **Monitoring** (P1) — samples requests into a rolling window, freezes evaluation
+    snapshots so all models are compared on identical inputs, computes per-model
+    SLIs (accuracy vs. base, p95 latency). Discard / recycle / monotonicity
+    policies prune the candidate set.
+  - **Model catalog** — shared registry: metadata, statistics, current placement.
+  - **Reconfiguration** (P2) — scores models (feasible models ranked by weighted
+    SLO margin, infeasible by violation), computes target placement via 0/1
+    knapsack per memory tier, plans the command sequence with BFS over valid
+    system states, schedules evaluations.
+  - **Scheduler** (P3) — forecasts request volume over a window (moving average,
+    EWMA, Holt, Holt-Winters); releases interfering commands only when the
+    predicted volume is below an idle threshold.
+- **vLLM layer** — one server per registered model, run in Docker.
 
-LLM serving workloads are not static.
+## vLLM extensions
 
-A high-quality base model may be the best choice when latency pressure is low.  
-A quantized model may satisfy the same accuracy objective while reducing latency.  
-A smaller independent model may be sufficient for easier workloads.  
-Under changing request rates and workload distributions, the best serving configuration can change over time.
+Kairos runs on a modified vLLM (⚠️ VERIFY: state how it ships — fork link,
+submodule, or Docker image). vLLM's existing sleep/wake mechanisms (L1/L2 sleep,
+wake-up from CPU) are extended with:
 
-Kairos treats this as a systems problem.
+- **`WAKE_UP_FROM_DISK`** — reallocate GPU memory, reload weights via RPC, reset prefix cache.
+- **`PREFETCH` / `WAKE_UP_FROM_PREFETCH`** — stage weights from disk into pinned CPU
+  memory *ahead of time*, shrinking the request-critical wake-up to a CPU→GPU copy
+  (8B model: 3.5 s disk wake-up → 1.45 s critical path).
+- **`WAKE_UP_PERSISTENT`** — keep the CPU copy after wake-up, making the next L1
+  sleep a near-free GPU release (8B model: 1.36 s → 0.28 s).
+- **`EVICT`** — drop CPU-resident weights directly (~1 ms), avoiding the naive
+  wake-then-L2-sleep workaround that transiently needs the model's full GPU
+  footprint (21+ GiB for an 8B model).
 
-Rather than assuming a single optimal model, Kairos adapts the serving configuration during runtime. It monitors real requests, evaluates candidate models on representative samples, and selects the model that best satisfies the configured accuracy and latency objectives.
+Transitions are conditioned (e.g. wake-up-from-prefetch requires a prior prefetch);
+the reconfiguration planner searches only legal sequences. Quantized models cannot
+be restored from disk (runtime weight layout ≠ checkpoint) and move only between
+GPU and CPU.
 
----
+## Results (summary)
 
-## Key Features
+Single RTX A5000 (24 GB), four QA datasets (BoolQ, LogiQA, MMLU, OpenBookQA),
+synthetic workload client (Poisson, ON/OFF, periodic, bursty, ramp, step):
 
-### Workload-Aware Monitoring
+- **INT8 (W8A8) and INT4 (W4A16) variants and smaller dense models** (Qwen3-4B)
+  preserve accuracy near the base model while cutting p95 latency; NF4 degrades on
+  reasoning tasks; accuracy loss is task- and scheme-dependent — the case for
+  runtime measurement.
+- **Holt-Winters** achieves the best idle-window prediction (F1 0.81, FPR 0.11) on
+  ON/OFF traffic.
+- **End-to-end**, Kairos switches the active model to an INT8 variant at runtime,
+  reducing request latency while both SLOs hold; remaining latency spikes trace
+  directly to false-positive idle predictions — on a single GPU, reconfiguration
+  and inference share the accelerator.
 
-Kairos samples live inference requests and stores representative evaluation snapshots. Candidate models are evaluated on requests that actually occur during serving, rather than only on static offline benchmarks.
+Full evaluation in the thesis (Ch. 4), incl. sleep/wake/prefetch/evict
+microbenchmarks across model sizes and families.
 
-### Adaptive Model Selection
+## Quickstart
 
-Kairos compares base, quantized, and independent models using configurable service objectives. Models are ranked according to latency, relative accuracy, and SLO satisfaction.
+⚠️ VERIFY this entire section against the real repo — commands below are a template.
 
-### Runtime Reconfiguration
+```bash
+git clone <repo-url> && cd kairos
+pip install -e .                       # ⚠️ or requirements.txt
+# prerequisites: NVIDIA GPU + driver, Docker + NVIDIA Container Toolkit,
+# HF_TOKEN for gated models
 
-Kairos can change the active serving model during runtime. It can also adjust the placement of non-active models to prepare for future workload changes.
+# 1. configure models + SLOs
+$EDITOR configs/config.yaml            # ⚠️ real path
 
-### Memory-Aware Placement
+# 2. start KairosCore and KairosAPI
+<real command>                         # ⚠️
+<real command>                         # ⚠️
 
-Kairos explicitly models GPU, CPU, and disk placement. It accounts for the full GPU memory required by an awake model, the reduced memory footprint of sleeping models, and the additional memory required to wake a model.
+# 3. send traffic (single request or workload client)
+curl -X POST localhost:8000/infer -H 'Content-Type: application/json' -d '{
+  "instruction": "Answer the question using the given context.",
+  "prompt": "Context: ... Question: ...",
+  "answer": "yes"
+}'
+<real client command, e.g. python -m client --config client.yaml>   # ⚠️
+```
 
-### Interference-Aware Evaluation
-
-Background evaluation is not free. Kairos controls when and how candidate models are evaluated to reduce interference with active serving.
-
-### vLLM-Based Execution
-
-Kairos uses vLLM as the inference backend and builds a separate control plane around multiple model servers.
-
----
-
-## System Components
-
-Kairos consists of several cooperating components.
-
-### API Layer
-
-Receives inference requests from clients and forwards them to the Kairos core.
-
-### Dispatcher
-
-Routes incoming requests to the currently active model server.
-
-### Monitor
-
-Samples requests and records model outputs, latency measurements, labels, and workload metadata.
-
-### Scheduler
-
-Decides when background evaluations should be executed based on workload behavior and predicted idle windows.
-
-### Controller
-
-Executes runtime actions such as evaluating models, waking models, sleeping models, and changing the active serving model.
-
-### Reconfiguration Engine
-
-Ranks candidate models, computes target placements, and generates the command sequence required to transition from the current state to the target state.
-
-### Memory Manager
-
-Tracks available GPU, CPU, and disk capacity and validates whether model movement operations are feasible.
-
----
-
-## Model States
-
-Kairos manages models across multiple runtime states.
-
-| State | Description |
-|---|---|
-| Active on GPU | The model currently serving incoming requests |
-| Awake on GPU | The model is fully loaded and ready for inference |
-| Sleeping on GPU | The model keeps a reduced GPU memory footprint |
-| Prefetched in CPU memory | The model weights are available in RAM |
-| Evicted to disk | The model is stored on disk and must be loaded before use |
-
-This allows Kairos to trade off memory usage, reconfiguration latency, and serving readiness.
-
----
-
-## Model Types
-
-Kairos supports different model relations.
-
-| Type | Description |
-|---|---|
-| Base model | High-quality reference model used as the main quality baseline |
-| Quantized model | Variant of the base model with reduced precision and lower serving cost |
-| Independent model | Separate model from another family or size class |
-
-This enables Kairos to compare quality-performance trade-offs between multiple serving alternatives.
-
----
-
-## Example Configuration
-
-Kairos is configured through YAML files.
+### Configuration
 
 ```yaml
 models:
-  - model_id: llama-8b-bf16
-    name: meta-llama/Llama-3.1-8B-Instruct
-    relation: base
-    port: 8100
-    gpu_factor: 1.30
-
-  - model_id: llama-8b-fp8
-    name: meta-llama/Llama-3.1-8B-Instruct-FP8
+  - model_id: meta-llama/Llama-3.1-8B-Instruct
+    relation: base          # accuracy ground truth
+    port: 8001
+    gpu_factor: 1.3         # weights × factor ≈ footprint incl. KV cache
+  - model_id: RedHatAI/Llama-3.2-3B-Instruct-quantized.w8a8
     relation: quantized
-    base_model: llama-8b-bf16
-    port: 8101
-    gpu_factor: 0.80
-
-  - model_id: qwen-4b
-    name: Qwen/Qwen3-4B-Instruct
+    port: 8002
+    gpu_factor: 1.3
+  - model_id: Qwen/Qwen3-1.7B
     relation: independent
-    port: 8102
-    gpu_factor: 1.30
-
-objectives:
-  accuracy_slo: 0.95
-  latency_slo_ms: 200
-
-  weights:
-    accuracy: 0.7
-    latency: 0.3
-
+    port: 8003
+    gpu_factor: 1.3
+slo:
+  accuracy: 0.95            # ≥ 95% agreement with base model
+  latency: 200              # p95 ≤ 200 ms
+  weight_acc: 0.7
+  weight_lat: 0.3
 monitoring:
-  sample_rate: 10
-  sample_size: 100
-
-scheduling:
-  forecast_horizon_seconds: 20
-  max_in_flight_evaluation_requests: 4
+  sample_rate: 10           # sample every 10th request
+  sample_size: 50           # rolling window / snapshot size
+  monotonicity: true        # INT8 fails ⇒ skip INT4
+  discard: 3                # drop candidate after 3 failed rounds
+  recycle: 3                # readmit after 3 rounds
+scheduler:
+  method: holt              # moving_avg | ewma | holt | holt_winters
+  window: 10                # forecast horizon (s)
 ```
 
----
+## Repository layout
 
-## Installation
-
-Clone the repository.
-
-```bash
-git clone https://github.com/<your-org>/kairos.git
-cd kairos
-```
-
-Create a Python environment.
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-```
-
-Install Kairos.
-
-```bash
-pip install -e .
-```
-
-For development dependencies:
-
-```bash
-pip install -e ".[dev]"
-```
-
----
-
-## Requirements
-
-Kairos is designed for Linux-based GPU systems.
-
-Recommended environment:
-
-- Python 3.10+
-- Docker
-- NVIDIA GPU
-- NVIDIA Container Toolkit
-- CUDA-compatible NVIDIA driver
-- vLLM-compatible model checkpoints
-- Hugging Face access token for gated models
-
----
-
-## Running Kairos
-
-Start the Kairos core.
-
-```bash
-python -m kairos.core --config configs/config.yaml
-```
-
-Start the API server.
-
-```bash
-uvicorn kairos.api.main:app --host 0.0.0.0 --port 8000
-```
-
-Send an inference request.
-
-```bash
-curl -X POST http://localhost:8000/infer \
-  -H "Content-Type: application/json" \
-  -d '{
-    "instruction": "Answer the following question.",
-    "prompt": "Is the sky blue during a clear day?",
-    "answer": "yes",
-    "dataset": "boolq",
-    "arrival_timestamp": 1710000000.0
-  }'
-```
-
-Example response:
-
-```json
-{
-  "kairos": {
-    "active_model": "llama-8b-bf16",
-    "correct": true,
-    "infer_latency_ms": 112.4
-  },
-  "result": "yes"
-}
-```
-
----
-
-## Experiments
-
-Kairos includes experiments for studying adaptive LLM serving behavior.
-
-### Model Movement
-
-Measures the cost of moving models between runtime states.
-
-Typical measurements include:
-
-- Sleep latency
-- Wake-up latency
-- Prefetch latency
-- Eviction latency
-- Awake GPU memory
-- Sleeping GPU memory
-- Transient memory requirements
-
-### Model Selection Trade-offs
-
-Compares base, quantized, and independent models under different workloads.
-
-Typical metrics include:
-
-- Relative accuracy compared to the base model
-- Median latency
-- p95 latency
-- SLO satisfaction
-- Throughput under different request rates
-
-### End-to-End Reconfiguration
-
-Evaluates whether Kairos can adapt the serving setup when workload conditions change.
-
-Typical questions include:
-
-- Does Kairos select a better model when the workload changes?
-- How long does reconfiguration take?
-- Which commands dominate reconfiguration latency?
-- How much does reconfiguration interfere with active serving?
-- Does the system continue to satisfy the configured objectives?
-
----
-
-## Repository Structure
-
-```text
-kairos/
-├── api/                     # API server and request handling
-├── core/
-│   ├── catalog/             # Model metadata and model registry
-│   ├── control/             # Runtime controller and control commands
-│   ├── memory/              # GPU, CPU, and disk memory management
-│   ├── monitoring/          # Online sampling and evaluation snapshots
-│   ├── reconfiguration/     # Ranking, placement, and transition planning
-│   └── scheduling/          # Background evaluation scheduling
-├── experiments/             # Experiment scripts and plotting utilities
-├── configs/                 # Example configuration files
-├── scripts/                 # Helper scripts
-└── README.md
-```
-
----
-
-## Design Principles
-
-Kairos follows three design principles.
-
-### Continuous Monitoring
-
-Serving decisions should be based on the workload currently observed by the system. Kairos therefore samples live requests and evaluates models on representative runtime data.
-
-### Runtime Reconfigurability
-
-The serving configuration should not be fixed after deployment. Kairos can switch the active model and adjust model placement while the system is running.
-
-### Interference-Aware Scheduling
-
-Model evaluation and model movement can affect active serving. Kairos therefore treats background work as a controlled systems operation rather than a free background task.
-
----
-
-## Research Scope
-
-Kairos focuses on single-node adaptive LLM serving with multiple vLLM model servers and a separate control plane.
-
-The current system investigates:
-
-- Runtime model selection
-- Quantized and independent model alternatives
-- Online evaluation on sampled requests
-- Memory-aware model placement
-- vLLM sleep, wake-up, prefetch, and eviction mechanisms
-- Reconfiguration under latency and accuracy objectives
-
----
+⚠️ VERIFY — replace with the actual tree.
 
 ## Status
 
-Kairos is research software developed as part of a master’s thesis on adaptive LLM serving systems.
-
-The implementation is intended for controlled experiments and systems research. It is not yet a production serving framework.
-
----
+Research prototype from a Master's thesis; built for controlled single-node
+experiments, not production serving.
 
 ## Citation
 
 ```bibtex
 @mastersthesis{enjilian2026kairos,
-  title  = {Kairos: Workload-Aware and Reconfigurable LLM Serving},
-  author = {Rene Enjilian},
-  school = {Technical University Berlin},
-  year   = {2026}
+  title  = {Workload-aware and Reconfigurable {LLM} Serving},
+  author = {Enjilian, Ren{\'e} Richard},
+  school = {Technische Universit{\"a}t Berlin},
+  year   = {2026},
+  month  = jun
 }
 ```
-
----
-
-## Acknowledgements
-
-Kairos builds on vLLM and the broader open-source ecosystem for efficient large language model inference.

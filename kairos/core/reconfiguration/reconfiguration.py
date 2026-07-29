@@ -45,8 +45,9 @@ class CoreReconfiguration:
         self.model_scores.clear()
         self.snapshot = snapshot
         self.monitoring_round = monitoring_round
-        await self.reconfiguration_algorithm()
+        #await self.reconfiguration_algorithm()
         # await self.hardcode_evaluation()
+        await self.evaluation_only_reconfiguration()
 
     async def hardcode_evaluation(self):
         self.models = self.catalog.get_catalog()
@@ -58,6 +59,37 @@ class CoreReconfiguration:
                 kind=ControlKind.EVALUATE_MODEL,
             )
         )
+
+    async def evaluation_only_reconfiguration(self) -> None:
+        self.models = self.get_reconfigurable_models()
+
+        current_placement = self.get_current_placement()
+        base_model = self.catalog.get_base()
+
+        # Make sure base is first, so compute_evaluation_commands treats it as active.
+        target_placement = {
+            "disk": current_placement["disk"],
+            "cpu": current_placement["cpu"],
+            "gpu": [base_model] + [
+                model for model in current_placement["gpu"]
+                if model.model_id != base_model.model_id
+            ],
+        }
+
+        self.compute_evaluation_commands(
+            current_placement=current_placement,
+            target_placement=target_placement,
+            pre_evaluated_model_ids={base_model.model_id},
+            evaluate_initial_gpu_models=True,
+        )
+
+        logger.info("Evaluation-only command sequence: %s", [
+            (command.kind, [model.model_id for model in command.model])
+            for command in self.command_sequence
+        ])
+
+        for command in self.command_sequence:
+            await self.scheduler.add_to_schedule_queue(command)
 
     async def reconfiguration_algorithm(self):
         # get models we want to reconfigure
@@ -85,6 +117,9 @@ class CoreReconfiguration:
                 (command.kind, [model.model_id for model in command.model])
                 for command in self.command_sequence
             ])
+
+            for command in self.command_sequence:
+                await self.scheduler.add_to_schedule_queue(command)
 
             return
 
@@ -172,7 +207,8 @@ class CoreReconfiguration:
         current_placement["cpu"] = []
         current_placement["gpu"] = []
 
-        for model in self.models.values():
+        #for model in self.models.values():
+        for model in self.catalog.get_catalog().values():
             placement = model.get_storage_location()
             current_placement[placement].append(model)
         return current_placement
@@ -220,9 +256,9 @@ class CoreReconfiguration:
         target_placement["gpu"].append(best_model)
 
         current_placement = self.get_current_placement()
-        # capacity = self.mem.get_free_gpu_bytes(0)
+        capacity = self.mem.get_free_gpu_bytes(0)
         # For offline, above is original
-        capacity = self._get_free_gpu_bytes(0)
+        #capacity = self._get_free_gpu_bytes(0)
 
         for model in current_placement["gpu"]:
             capacity += model.gpu_wake_memory_allocation
@@ -372,7 +408,7 @@ class CoreReconfiguration:
             self._append_command(
                 kind=ControlKind.WAKE_UP_PERSISTENT,
                 models=[target_active_model],
-                interference=True,
+                interference=False,
             )
             simulated_free_bytes -= required_bytes
 
@@ -418,7 +454,7 @@ class CoreReconfiguration:
             self._append_command(
                 kind=ControlKind.WAKE_UP_PERSISTENT,
                 models=[model],
-                interference=True,
+                interference=False,
             )
             simulated_free_bytes -= required_bytes
 
@@ -531,7 +567,7 @@ class CoreReconfiguration:
                 self._append_command(
                     kind=ControlKind.WAKE_UP_PERSISTENT,
                     models=[model],
-                    interference=True,
+                    interference=False,
                 )
 
                 simulated_free_bytes -= required_bytes
@@ -562,9 +598,9 @@ class CoreReconfiguration:
 
     def _get_effective_free_gpu_bytes(self, device_id: int) -> int:
         total_bytes = self.mem.get_total_gpu_bytes(device_id)
-        # free_bytes = self.mem.get_free_gpu_bytes(device_id)
+        free_bytes = self.mem.get_free_gpu_bytes(device_id)
         # For offline testing:
-        free_bytes = self._get_free_gpu_bytes(device_id)
+        #free_bytes = self._get_free_gpu_bytes(device_id)
 
         safety_margin_bytes = int(
             total_bytes * self.mem.gpu_safety_margin_percent

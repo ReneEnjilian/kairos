@@ -49,8 +49,8 @@ class CoreScheduler:
         self.forecaster = self._create_forecaster(self.method)
 
     async def scheduling_loop(self) -> None:
-        # await self.initiate_model_servers()
-        # await self.set_active_model(self.catalog.get_base())
+        await self.initiate_model_servers()
+        await self.set_active_model(self.catalog.get_base())
 
         while True:
             job = await self.schedule_queue.get()
@@ -191,5 +191,3 @@ class CoreScheduler:
         predicted_requests = sum(predicted_counts)
 
         return predicted_requests <= self.idle_request_threshold
-
-

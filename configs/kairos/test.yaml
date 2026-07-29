@@ -1,37 +1,42 @@
 models:
-  - model_id: meta-llama/Llama-3.2-3B-Instruct
+  - model_id: Qwen/Qwen3-4B-Instruct-2507
     relation: base
     port: 8001
     gpu_factor: 1.3
 
-  - model_id: RedHatAI/Qwen3-4B-Instruct-2507-quantized.w8a8
+  - model_id: Qwen/Qwen3-4B-Instruct-2507-FP8
     relation: quantized
     port: 8002
     gpu_factor: 1.3
 
-  #- model_id: RedHatAI/Qwen3-4B-Instruct-2507-quantized.w4a16
-  #  relation: quantized
-  #  port: 8003
-  #  gpu_factor: 1.7
+  - model_id: RedHatAI/Qwen3-4B-Instruct-2507-quantized.w8a8
+    relation: quantized
+    port: 8003
+    gpu_factor: 1.3
 
-  #- model_id: meta-llama/Llama-3.2-3B-Instruct
-  #  relation: independent
-  #  port: 8004
-  #  gpu_factor: 1.3
+  - model_id: RedHatAI/Qwen3-4B-Instruct-2507-quantized.w4a16
+    relation: quantized
+    port: 8004
+    gpu_factor: 1.7
+
+  - model_id: meta-llama/Llama-3.2-3B-Instruct
+    relation: independent
+    port: 8005
+    gpu_factor: 1.3
 
 slo:
-  accuracy: 0.9
-  latency: 100
+  accuracy: 0.99
+  latency: 70
   weight_acc: 0.7
   weight_lat: 0.3
 
 monitoring:
-  sample_rate: 1
-  sample_size: 15
+  sample_rate: 10
+  sample_size: 50
   monotonicity: false
-  discard: 2
+  discard: 4
   recycle: 0
 
 scheduler:
-  method: holt
-  window: 10
+  method: holt_winters
+  window: 3

@@ -209,10 +209,10 @@ class CoreController:
                     self.dispatch_enabled.set()
 
                 if command.kind == ControlKind.WAKE_UP_PERSISTENT:
-                    if self.dispatch_enabled.is_set():
-                        self.dispatch_enabled.clear()
+                    #if self.dispatch_enabled.is_set():
+                    #    self.dispatch_enabled.clear()
                     await self.wake_up_from_cpu_persistent(command.model[0])
-                    self.dispatch_enabled.set()
+                    #self.dispatch_enabled.set()
 
                 if command.kind == ControlKind.WAKE_UP_FROM_DISK:
                     if self.dispatch_enabled.is_set():
