@@ -2,11 +2,19 @@
 
 **Workload-aware and reconfigurable LLM serving, built on vLLM.**
 
-Kairos treats the serving configuration — which model serves, where model weights
-reside, and when the system may adapt — as a runtime decision instead of a
-deployment-time constant. It monitors the live request stream, evaluates candidate
-models on sampled real requests, and reconfigures model selection and placement
-during serving, subject to user-defined accuracy and latency objectives (SLOs).
+
+Kairos is a serving system that adapts itself to the workload it observes. While
+serving requests with a high-quality base model, it samples the live request
+stream and evaluates cheaper candidates — quantized variants and smaller
+independent models — on those sampled requests in the background. When a
+candidate satisfies the configured accuracy and latency objectives (SLOs), Kairos
+switches the active model at runtime and reorganizes where model weights reside
+across GPU memory, CPU memory, and disk. Disruptive actions are deferred to
+forecasted idle windows in the request stream, so adaptation interferes as little
+as possible with live serving.
+
+The result: the system discovers on its own, from live traffic, that a cheaper
+model is good enough — and moves to it without stopping.
 
 Developed as a Master's thesis at TU Berlin (DAMS group, supervised by
 Prof. Matthias Boehm and Prof. Volker Markl), graded 1.0.
