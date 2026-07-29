@@ -21,14 +21,27 @@ thesis: [**Workload-aware and Reconfigurable LLM Serving** (PDF)](docs/thesis.pd
 
 ---
 
-## Why
+## Motivation
 
-Static LLM deployments pick one model and one placement before the first request
-arrives. But the best configuration depends on the workload: a quantized or smaller
-model can cut p95 latency substantially while still matching the base model's
-answers — whether it does depends on the task, the quantization scheme, and the
-hardware, and can only be measured at runtime. Engines like vLLM make a *given*
-configuration fast; Kairos decides *when to change* the configuration.
+LLMs are increasingly deployed as interactive inference services: requests arrive
+continuously, users expect low response latency, and providers operate under
+limited GPU memory and compute. At the same time, different model variants —
+full-precision, quantized, or smaller independent models — expose different
+trade-offs between output quality, latency, and memory footprint. Which variant
+is preferable is not fixed: it depends on the current workload, the request rate,
+and the service-level objectives, and the accuracy cost of a cheaper variant
+varies with the task and quantization scheme.
+
+Static deployments cannot exploit this. They select one model and one placement
+at startup, even though the conditions under which the system operates change
+during serving. Existing inference engines such as vLLM make a *given*
+configuration efficient — through continuous batching and paged KV-cache
+management — but they do not decide when the configuration itself should change.
+
+Kairos addresses this gap. It treats the serving configuration as a runtime
+decision: monitoring the observed workload, evaluating candidate models against
+the configured objectives on real sampled requests, and reconfiguring model
+selection and placement while serving continues.
 
 ## Design principles
 
