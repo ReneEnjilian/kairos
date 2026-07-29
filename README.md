@@ -16,9 +16,8 @@ as possible with live serving.
 The result: the system discovers on its own, from live traffic, that a cheaper
 model is good enough — and moves to it without stopping.
 
-Developed as a Master's thesis at TU Berlin (DAMS group, supervised by
-Prof. Matthias Boehm and Prof. Volker Markl), graded 1.0.
-📄 [Thesis PDF](⚠️ VERIFY: link or `docs/thesis.pdf`)
+📄 The full design and evaluation are documented in the accompanying Master's
+thesis: [**Workload-aware and Reconfigurable LLM Serving** (PDF)](docs/thesis.pdf).
 
 ---
 
