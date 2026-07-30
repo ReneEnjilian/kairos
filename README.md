@@ -54,7 +54,9 @@ selection and placement while serving continues.
 ## Architecture
 
 
-<img src="docs/architecture.jpg" width="600" alt="Kairos architecture: KairosAPI and KairosCore processes connected via IPC, with the Core orchestrating monitoring, reconfiguration, and scheduling over vLLM model servers">
+<p align="center">
+  <img src="docs/architecture.jpg" width="600" alt="Kairos architecture">
+</p>
 
 Kairos is structured into four layers: the client-facing **KairosAPI**, an
 **IPC layer**, the **KairosCore** orchestration process, and the **vLLM
