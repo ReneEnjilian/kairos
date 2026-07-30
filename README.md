@@ -118,24 +118,34 @@ pending API calls.
 
 ## vLLM extensions
 
-Kairos runs on a modified vLLM (⚠️ VERIFY: state how it ships — fork link,
-submodule, or Docker image). vLLM's existing sleep/wake mechanisms (L1/L2 sleep,
-wake-up from CPU) are extended with:
+Kairos runs on a modified vLLM ([`ReneEnjilian/vllm`, branch
+`thesis-v0.13.0`](https://github.com/ReneEnjilian/vllm/tree/thesis-v0.13.0)).
+The guiding principle: the model server process always stays alive — only model
+weights move between memory tiers. This avoids paying the multi-minute server
+startup on every configuration change; transitions complete in seconds.
 
-- **`WAKE_UP_FROM_DISK`** — reallocate GPU memory, reload weights via RPC, reset prefix cache.
-- **`PREFETCH` / `WAKE_UP_FROM_PREFETCH`** — stage weights from disk into pinned CPU
-  memory *ahead of time*, shrinking the request-critical wake-up to a CPU→GPU copy
-  (8B model: 3.5 s disk wake-up → 1.45 s critical path).
-- **`WAKE_UP_PERSISTENT`** — keep the CPU copy after wake-up, making the next L1
-  sleep a near-free GPU release (8B model: 1.36 s → 0.28 s).
-- **`EVICT`** — drop CPU-resident weights directly (~1 ms), avoiding the naive
-  wake-then-L2-sleep workaround that transiently needs the model's full GPU
-  footprint (21+ GiB for an 8B model).
+vLLM ships with two sleep levels (L1: weights offloaded to CPU memory, L2:
+weights discarded) and the corresponding wake-ups. Kairos extends this with
+staged and direct movement across the full GPU–CPU–disk hierarchy:
 
-Transitions are conditioned (e.g. wake-up-from-prefetch requires a prior prefetch);
-the reconfiguration planner searches only legal sequences. Quantized models cannot
-be restored from disk (runtime weight layout ≠ checkpoint) and move only between
-GPU and CPU.
+
+
+| Command | Effect | Notes |
+|---|---|---|
+| `L1_SLEEP` | GPU → CPU: offload weights, free GPU allocation | existing vLLM; 1.36 s for an 8B model |
+| `L2_SLEEP` | GPU → disk: discard weights (persist on disk) | existing vLLM; < 0.3 s, size-independent |
+| `WAKE_UP_FROM_CPU` | CPU → GPU | existing vLLM; 1.41 s for an 8B model |
+| `WAKE_UP_FROM_DISK` | disk → GPU: reallocate, reload via RPC, reset prefix cache | **added**; 3.54 s for an 8B model |
+| `PREFETCH` | disk → pinned CPU memory, ahead of need | **added**; runs off the critical path |
+| `WAKE_UP_FROM_PREFETCH` | prefetched CPU → GPU | **added**; critical path shrinks to ≈ CPU wake-up (1.45 s for 8B) |
+| `WAKE_UP_PERSISTENT` | CPU → GPU, CPU copy retained | **added**; next `L1_SLEEP` drops to 0.28 s (from 1.36 s) |
+| `EVICT` | drop CPU-resident weights directly | **added**; ~1 ms, avoids transient full-GPU-footprint reload (21+ GiB for 8B) |
+
+Transitions are conditioned — e.g. `WAKE_UP_FROM_PREFETCH` is only legal after a
+`PREFETCH` — and the reconfiguration planner searches exclusively over legal
+command sequences. Quantized models cannot be restored from disk (their runtime
+weight layout does not match the checkpoint), so they move only between GPU and
+CPU memory.
 
 ## Results (summary)
 
