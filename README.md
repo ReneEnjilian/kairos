@@ -135,7 +135,7 @@ staged and direct movement across the full GPU–CPU–disk hierarchy:
 | `L1_SLEEP` | GPU → CPU: offload weights, free GPU allocation | existing vLLM; 1.36 s for an 8B model |
 | `L2_SLEEP` | GPU → disk: discard weights (persist on disk) | existing vLLM; < 0.3 s, size-independent |
 | `WAKE_UP_FROM_CPU` | CPU → GPU | existing vLLM; 1.41 s for an 8B model |
-| `WAKE_UP_FROM_DISK` | disk → GPU: reallocate, reload via RPC, reset prefix cache | **added**; 3.54 s for an 8B model |
+| `WAKE_UP_FROM_DISK` | disk → GPU: reload weights, reset prefix cache | existing vLLM; 3.54 s for an 8B model |
 | `PREFETCH` | disk → pinned CPU memory, ahead of need | **added**; runs off the critical path |
 | `WAKE_UP_FROM_PREFETCH` | prefetched CPU → GPU | **added**; critical path shrinks to ≈ CPU wake-up (1.45 s for 8B) |
 | `WAKE_UP_PERSISTENT` | CPU → GPU, CPU copy retained | **added**; next `L1_SLEEP` drops to 0.28 s (from 1.36 s) |
