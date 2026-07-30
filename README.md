@@ -53,28 +53,66 @@ selection and placement while serving continues.
 
 ## Architecture
 
-![Kairos architecture](⚠️ VERIFY: export thesis Fig. 3.2 to docs/architecture.png)
 
-Two processes connected by a ZeroMQ IPC layer:
+![Kairos architecture: KairosAPI and KairosCore processes connected via IPC, with the Core orchestrating monitoring, reconfiguration, and scheduling over vLLM model servers](docs/architecture.jpg)
 
-- **KairosAPI** — HTTP entry point (`/infer`); validates requests, records arrival timestamps.
-- **KairosCore** — orchestration:
-  - **Controller** — admits requests, dispatches them *concurrently* to the active
-    vLLM server (one async task per request, exposing overlap for continuous
-    batching), executes control commands, runs candidate evaluations.
-  - **Monitoring** (P1) — samples requests into a rolling window, freezes evaluation
-    snapshots so all models are compared on identical inputs, computes per-model
-    SLIs (accuracy vs. base, p95 latency). Discard / recycle / monotonicity
-    policies prune the candidate set.
-  - **Model catalog** — shared registry: metadata, statistics, current placement.
-  - **Reconfiguration** (P2) — scores models (feasible models ranked by weighted
-    SLO margin, infeasible by violation), computes target placement via 0/1
-    knapsack per memory tier, plans the command sequence with BFS over valid
-    system states, schedules evaluations.
-  - **Scheduler** (P3) — forecasts request volume over a window (moving average,
-    EWMA, Holt, Holt-Winters); releases interfering commands only when the
-    predicted volume is below an idle threshold.
-- **vLLM layer** — one server per registered model, run in Docker.
+Kairos is structured into four layers: the client-facing **KairosAPI**, an
+**IPC layer**, the **KairosCore** orchestration process, and the **vLLM
+runtime layer**. API and Core run as separate processes, so client-facing
+request handling is isolated from internal orchestration.
+
+**Request flow.** A client submits a request to the KairosAPI (`/infer`), which
+validates it against the request schema and records the arrival timestamp — the
+signal the scheduler later uses for idle-window forecasting. The request crosses
+the IPC boundary (ZeroMQ, DEALER/ROUTER) into KairosCore, where the controller
+places it into the internal request queue and dispatches it to the currently
+active vLLM model server. Dispatch is concurrent: each request becomes its own
+asynchronous task, so overlapping requests reach vLLM and its continuous
+batching stays effective. The completed result — generated answer, correctness
+value, inference latency, serving model — returns through the same path.
+Responses may complete out of order; request identifiers match them back to the
+pending API calls.
+
+**KairosCore components.**
+
+- **Controller** — the central coordination point. It admits validated requests
+  into the request queue, runs the concurrent dispatcher (bounded by a
+  semaphore, with a dispatch gate that can pause forwarding during selected
+  control operations), executes control commands (starting/stopping model
+  servers, model-state transitions, setting the active model), and evaluates
+  candidate models on sampled requests — concurrently, with results grouped per
+  model.
+
+- **Monitoring** (P1) — samples request–result pairs from live traffic at a
+  configurable rate into a bounded rolling window. Once full, the window is
+  frozen into an evaluation snapshot, so every candidate model is evaluated on
+  identical inputs. From the results, the monitor computes per-model SLIs —
+  accuracy relative to the base model and p95 inference latency — and records
+  SLO satisfaction. Discard, recycle, and monotonicity policies prune which
+  candidates remain in future evaluation rounds.
+
+- **Model catalog** — the shared registry of all registered models: Hugging Face
+  identifier, server port, relation (base / quantized / independent), memory
+  estimates, current placement in the memory hierarchy, and the latest
+  evaluation statistics. All components read model state from here.
+
+- **Reconfiguration** (P2) — translates monitoring statistics into configuration
+  changes. It scores models (feasible models ranked by their weighted margin
+  above the SLOs, infeasible ones by violation magnitude), selects the target
+  active model, computes a target placement by solving a 0/1 knapsack per
+  memory tier (GPU, then CPU), plans the command sequence from the current to
+  the target placement via breadth-first search over valid system states, and
+  schedules candidate evaluations for the next monitoring round.
+
+- **Scheduler** (P3) — controls *when* commands execute. Non-interfering
+  commands are forwarded to the controller immediately; interfering ones are
+  held until the forecasted request volume over the next window falls below an
+  idle threshold. Forecasting methods: moving average, EWMA, Holt, and
+  Holt-Winters. Command order is preserved.
+
+- **vLLM interface** — encapsulates all HTTP interaction with the vLLM model
+  servers: inference calls to the active model, and the runtime-control
+  operations (sleep, wake-up, prefetch, evict) used during reconfiguration.
 
 ## vLLM extensions
 
