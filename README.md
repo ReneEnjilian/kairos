@@ -148,24 +148,27 @@ weight layout does not match the checkpoint), so they move only between GPU and
 CPU memory.
 
 The microbenchmarks below quantify what the added commands buy
-(Llama-3.2-1B / Llama-3.2-3B / Llama-3.1-8B):
+(Llama-3.2-1B / Llama-3.2-3B / Llama-3.1-8B).
+
+**Sleep.** The persistent variant makes `L1_SLEEP` act as a hybrid between the
+two existing levels. With a CPU-resident weight copy, putting an 8B model to
+sleep costs 0.28 s — L2-like latency, since the GPU allocation is simply
+released — while the weights land in CPU memory rather than only on disk, so
+the model stays a fast wake-up away.
 
 <p align="center">
-  <img src="docs/sleep-latency.jpg" width="420" alt="Sleep latency across model sizes: L1, L2, and L1 with CPU-resident weights">
-  <img src="docs/wakeup-latency.jpg" width="420" alt="Wake-up latency across model sizes: CPU, persistent, disk, and the two-stage prefetch path">
+  <img src="docs/sleep-latency.jpg" width="600" alt="Sleep latency across model sizes: L1, L2, and L1 with CPU-resident weights">
 </p>
 
-*Left — sleep: the persistent variant makes `L1_SLEEP` act as a hybrid between
-the two existing levels. With a CPU-resident weight copy, putting an 8B model
-to sleep costs 0.28 s — L2-like latency, since the GPU allocation is simply
-released — while the weights land in CPU memory rather than only on disk, so
-the model stays a fast wake-up away.*
+**Wake-up.** The two-stage prefetch path outperforms the native disk wake-up
+where it matters. Total work is comparable (3.84 s vs. 3.54 s for an 8B model),
+but the disk→CPU copy (2.39 s) runs ahead of need, off the critical path — when
+the model must actually serve, only the 1.45 s `WAKE_UP_FROM_PREFETCH` remains,
+close to a plain CPU wake-up (1.41 s).
 
-*Right — wake-up: the two-stage prefetch path outperforms the native disk
-wake-up where it matters. Total work is comparable (3.84 s vs. 3.54 s for an 8B
-model), but the disk→CPU copy (2.39 s) runs ahead of need, off the critical
-path — when the model must actually serve, only the 1.45 s
-`WAKE_UP_FROM_PREFETCH` remains, close to a plain CPU wake-up (1.41 s).*
+<p align="center">
+  <img src="docs/wakeup-latency.jpg" width="600" alt="Wake-up latency across model sizes: CPU, persistent, disk, and the two-stage prefetch path">
+</p>
 
 ## Results (summary)
 
