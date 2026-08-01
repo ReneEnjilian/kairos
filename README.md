@@ -294,11 +294,6 @@ workload_pattern:
   period_seconds: 20
 ```
 
-## Repository layout
-
-⚠️ VERIFY — replace with the actual tree.
-
-## Status
 
 Research prototype from a Master's thesis; built for controlled single-node
 experiments, not production serving.
