@@ -302,7 +302,7 @@ experiments, not production serving.
 
 ```bibtex
 @mastersthesis{enjilian2026kairos,
-  title  = {Workload-aware and Reconfigurable {LLM} Serving},
+  title  = {Workload-aware and Reconfigurable LLM Serving},
   author = {Enjilian, Ren{\'e} Richard},
   school = {Technische Universit{\"a}t Berlin},
   year   = {2026},
