@@ -272,6 +272,28 @@ scheduler:
   window: 10                # forecast horizon (s)
 ```
 
+### Client Configuration
+
+The client supports several workload patterns (`poisson`, `on_off`, `periodic`,
+`bursty`, `ramp`, `step`), each with its own parameters controlling the request
+arrival process. An example configuration using the periodic pattern:
+
+```yaml
+client:
+  dataset: boolq            # boolq | logiqa | mmlu | openbookqa
+  kairos_port: 8000
+  endpoint: /infer
+  keep_logs: true           # write per-request results to JSONL
+  max_in_flight: 256        # cap on concurrent outstanding requests
+  max_requests: 3000        # dataset wraps around if smaller
+  random_seed: 42
+workload_pattern:
+  type: periodic            # sinusoidal request rate
+  base_rate: 6.0            # mean rate (req/s)
+  amplitude: 5.5            # rate oscillates in [0.5, 11.5] req/s
+  period_seconds: 20
+```
+
 ## Repository layout
 
 ⚠️ VERIFY — replace with the actual tree.
