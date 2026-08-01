@@ -209,7 +209,36 @@ export HF_TOKEN=...
 
 ## Running Kairos
 
-⚠️ still to fill in
+**1. Generate the datasets.** The client replays QA datasets (BoolQ, LogiQA,
+MMLU, OpenBookQA) preprocessed into the Kairos request format:
+
+```bash
+cd kairos/data
+python generate_datasets.py
+```
+
+**2. Configure the system.** Models, SLOs, and runtime parameters are defined
+in a single YAML file (any filename works; `configuration.yaml` below) — see
+[Configuration](#configuration) for the full format.
+
+**3. Start the system:**
+
+```bash
+kairos serve configuration.yaml
+```
+
+This starts the KairosAPI and KairosCore and manages the vLLM model-server
+containers according to the configuration.
+
+**4. Send traffic** via the client, which controls the arrival pattern
+(Poisson, ON/OFF, periodic, bursty, ramp, step), request rate, dataset, and
+logging. It is likewise configured through a YAML file (any filename works;
+`client.yaml` below) — see [Client configuration](#client-configuration) for
+the full format:
+
+```bash
+python -m client.main client.yaml
+```
 
 ### Configuration
 
