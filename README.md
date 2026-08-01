@@ -170,50 +170,46 @@ close to a plain CPU wake-up (1.41 s).
   <img src="docs/wakeup-latency.jpg" width="600" alt="Wake-up latency across model sizes: CPU, persistent, disk, and the two-stage prefetch path">
 </p>
 
-## Results (summary)
 
-Single RTX A5000 (24 GB), four QA datasets (BoolQ, LogiQA, MMLU, OpenBookQA),
-synthetic workload client (Poisson, ON/OFF, periodic, bursty, ramp, step):
+## Installation
 
-- **INT8 (W8A8) and INT4 (W4A16) variants and smaller dense models** (Qwen3-4B)
-  preserve accuracy near the base model while cutting p95 latency; NF4 degrades on
-  reasoning tasks; accuracy loss is task- and scheme-dependent — the case for
-  runtime measurement.
-- **Holt-Winters** achieves the best idle-window prediction (F1 0.81, FPR 0.11) on
-  ON/OFF traffic.
-- **End-to-end**, Kairos switches the active model to an INT8 variant at runtime,
-  reducing request latency while both SLOs hold; remaining latency spikes trace
-  directly to false-positive idle predictions — on a single GPU, reconfiguration
-  and inference share the accelerator.
+Kairos requires a Linux host with an NVIDIA GPU, a CUDA-compatible driver,
+Docker, and the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
+(model servers run as containers). Python ≥ 3.12.
 
-Full evaluation in the thesis (Ch. 4), incl. sleep/wake/prefetch/evict
-microbenchmarks across model sizes and families.
-
-## Quickstart
-
-⚠️ VERIFY this entire section against the real repo — commands below are a template.
+**1. Build the modified vLLM image.** Kairos runs its model servers on a
+modified vLLM ([`ReneEnjilian/vllm`, branch `thesis-v0.13.0`](https://github.com/ReneEnjilian/vllm/tree/thesis-v0.13.0)),
+shipped as an overlay on the official `vllm/vllm-openai:v0.13.0` image:
 
 ```bash
-git clone <repo-url> && cd kairos
-pip install -e .                       # ⚠️ or requirements.txt
-# prerequisites: NVIDIA GPU + driver, Docker + NVIDIA Container Toolkit,
-# HF_TOKEN for gated models
-
-# 1. configure models + SLOs
-$EDITOR configs/config.yaml            # ⚠️ real path
-
-# 2. start KairosCore and KairosAPI
-<real command>                         # ⚠️
-<real command>                         # ⚠️
-
-# 3. send traffic (single request or workload client)
-curl -X POST localhost:8000/infer -H 'Content-Type: application/json' -d '{
-  "instruction": "Answer the question using the given context.",
-  "prompt": "Context: ... Question: ...",
-  "answer": "yes"
-}'
-<real client command, e.g. python -m client --config client.yaml>   # ⚠️
+git clone -b thesis-v0.13.0 https://github.com/ReneEnjilian/vllm.git
+cd vllm
+docker build -f Dockerfile.thesis -t vllm-openai:thesis-v0.13.0 .
 ```
+
+**2. Pull the CUDA base image** used for the containerized model servers:
+
+```bash
+docker pull nvidia/cuda:12.9.1-base-ubuntu22.04
+```
+
+**3. Install Kairos:**
+
+```bash
+git clone https://github.com/ReneEnjilian/kairos.git
+cd kairos
+pip install -e .
+```
+
+For gated Hugging Face models (e.g. Llama), export a token before running:
+
+```bash
+export HF_TOKEN=...
+```
+
+## Running Kairos
+
+⚠️ still to fill in
 
 ### Configuration
 
