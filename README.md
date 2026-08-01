@@ -219,7 +219,7 @@ python generate_datasets.py
 
 **2. Configure the system.** Models, SLOs, and runtime parameters are defined
 in a single YAML file (any filename works; `configuration.yaml` below) — see
-[Configuration](#configuration) for the full format.
+[Kairos Configuration](#configuration) for the full format.
 
 **3. Start the system:**
 
@@ -240,7 +240,7 @@ the full format:
 python -m client.main client.yaml
 ```
 
-### Configuration
+### Kairos Configuration
 
 ```yaml
 models:
